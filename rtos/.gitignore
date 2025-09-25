@@ -4,3 +4,6 @@
 .ccls
 .cache
 compile_commands.json
+
+.ds_store
+.DS_Store
