@@ -1,0 +1,10 @@
+CompileFlags:
+  Add: 
+  - -xc
+  - -I./.pio/libdeps/nucleo_l476rg/Unity/src/
+  - -DUNITY_EXCLUDE_SETJMP_H
+  - -DUNITY_EXCLUDE_MATH_H
+  - -DUNITY_OUTPUT_CHAR
+  - -Dprintf(...)=((void)0)
+Completion:
+  HeaderInsertion: Never
