@@ -1,30 +1,34 @@
-#include "button.h"
-#include "gpio_exti.h"
-#include "led.h"
+#include "common.h"
+#include "svc.h"
+#include "scheduling.h"
 #include "serial.h"
 #include <stdbool.h>
 
-void toggle_on(void) {
-  led_on();
+task_err ping(task_data* task) {
+  while (1) {
+    printf("ping\n");
+  }
 }
 
-void toggle_off(void) {
-  led_off();
+task_err pong(task_data* task) {
+  while (1) {
+    printf("pong\n");
+  }
 }
 
 int main(void) {
   HAL_Init();
   HAL_Delay(1000); // Allow time for monitor to connect
 
+  SVC_Init();
   serial_init();
-  led_init();
-  button_init();
+  scheduling_init();
+
+  scheduling_add_task(ping);
+  scheduling_add_task(pong);
 
   printf("Everything initialized!\n");
-
-  // gpio_exti_register_callback(BUTTON_PIN, toggle_led, false);
-  button_on_pressed(toggle_on, BUTTON_OVERRIDE_NONE);
-  button_on_released(toggle_off, BUTTON_OVERRIDE_NONE);
+  scheduling_run();
 
   while (1) {
   }
@@ -33,10 +37,4 @@ int main(void) {
 // Must be present for serial to work
 int _write(int file, char* ptr, int len) {
   return serial_write(ptr, len);
-}
-
-// Must be present for HAL_Delay to work
-// Runs every 1ms
-void SysTick_Handler(void) {
-  HAL_IncTick();
 }
