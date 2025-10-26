@@ -152,13 +152,21 @@ void TaskSwitchContext(void) {
   task_index = (task_index + 1) % num_tasks;
 }
 
-void PendSV_Handler() {
+// Side stuff 
+void PendSV_C() {
   SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
+}
+
+void PendSV_Handler() {
   __asm__ volatile(
+      // Call to a C function to define some debugging stuff
+      "push {lr, r12, %[CurrentTask]}\n\t"
+      "bl PendSV_C\n\t"
+      "pop {lr, r12, %[CurrentTask]}\n\t"
       // Load Process Stack Pointer into r0
       "mrs r0, psp\n\t"
       // Load value of current_task into r2
-      "ldr r2, %[CurrentTask]\n\t"
+      "ldr r2, [%[CurrentTask]]\n\t"
       // Load stack_top value into r1
       "ldr r1, [r2]\n\t"
       // If FPU regs need to be pushed, push them
@@ -174,7 +182,7 @@ void PendSV_Handler() {
       // --Actually switch contexts--
       // This calls a function to determine which task to switch into
       // Save register which would be clobbered
-      "stmdb sp!, {r0, r3}\n\t"
+      "stmdb sp!, {r0, %[CurrentTask]}\n\t"
       // Disable interrupts for context switch
       "mov r0, MAX_INTERRUPT_PRIORITY\n\t"
       "msr basepri, r0\n\t"
@@ -185,9 +193,9 @@ void PendSV_Handler() {
       // Re-enable interrupt
       "mov r0, #0\n\t"
       "msr basepri, r0\n\t"
-      "ldmia sp!, {r0, r3}\n\t"
+      "ldmia sp!, {r0, %[CurrentTask]}\n\t"
       // get current task into r2
-      "ldr r2, %[CurrentTask]\n\t"
+      "ldr r2, [%[CurrentTask]]\n\t"
       // get new value of stack_top field
       "ldr r0, [r2]\n\t"
       // Restore the core registers
@@ -201,10 +209,10 @@ void PendSV_Handler() {
       "bx r14\n\t"
 
       // AND THE REST IF THE REGISTERS ARE RESTORED AUTO-MAGICALLY!!!
-      : 
-      : [CurrentTask] "m"(current_task),
+      :
+      : [CurrentTask] "r"(&current_task),
         [MAX_INTERRUPT_PRIORITY] "i"(MAX_INTERRUPT_PRIORITY)
-      : "r0", "r1", "r2", "r12", "r14"
+      : 
   );
   __builtin_unreachable();
 }
