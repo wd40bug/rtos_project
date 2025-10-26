@@ -19,6 +19,7 @@ typedef struct {
   task_data task_data;
 } task_data_internal;
 
+static bool is_running = false;
 // To potentially restore the calling function when all tasks end
 volatile uint32_t restore_stack[MAX_TASK_STACK_SIZE];
 volatile task_data_internal restore_task = {
@@ -62,6 +63,7 @@ sched_err scheduling_run() {
                   SysTick_CTRL_ENABLE_Msk;
   // Make sure in priviledged mode
   if ((__get_CONTROL() & CONTROL_nPRIV_Msk) == 0) {
+    // TODO:
     // EnablePrivilegedMode();
   }
   // Point PSP into IDLE_TASK stack
@@ -73,6 +75,7 @@ sched_err scheduling_run() {
                    : "r0");
 
   // Start switching!
+  is_running = true;
   generate_pend_sv();
   // Theoretically anything past this point should be impossible
   printf("Uhhhhhhhhh\n");
@@ -151,7 +154,6 @@ void TaskSwitchContext(void) {
 
 void PendSV_Handler() {
   SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
-  printf("pendSV\n");
   __asm__ volatile(
       // Load Process Stack Pointer into r0
       "mrs r0, psp\n\t"
@@ -167,7 +169,7 @@ void PendSV_Handler() {
       // Save GPRs
       "stmdb r0!, {r4-r11, r14}\n\t"
       // Save stack position to stack_top field
-      "str r0, [r1]\n\t"
+      "str r0, [r2]\n\t"
 
       // --Actually switch contexts--
       // This calls a function to determine which task to switch into
@@ -199,16 +201,23 @@ void PendSV_Handler() {
       "bx r14\n\t"
 
       // AND THE REST IF THE REGISTERS ARE RESTORED AUTO-MAGICALLY!!!
-      :
+      : 
       : [CurrentTask] "m"(current_task),
         [MAX_INTERRUPT_PRIORITY] "i"(MAX_INTERRUPT_PRIORITY)
       : "r0", "r1", "r2", "r12", "r14"
   );
+  __builtin_unreachable();
+}
+
+bool should_switch() {
+  return is_running;
 }
 
 void SysTick_Handler(void) {
   HAL_IncTick();
-  // generate_pend_sv();
+  if (should_switch()) {
+    // generate_pend_sv();
+  }
 }
 
 #define HALT_IF_DEBUGGING()                                                    \
@@ -246,4 +255,9 @@ void HardFault_Handler(void) {
   }
   while (1)
     ;
+}
+
+sched_err yield() {
+  generate_pend_sv();
+  return SCHED_ERR_OK;
 }

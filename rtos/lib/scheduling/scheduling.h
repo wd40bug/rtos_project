@@ -50,4 +50,6 @@ typedef struct __attribute__ ((packed)) {
   ShortStackFrame short_frame;
 } FullStackFrame;
 
+sched_err yield();
+
 #endif /* ifndef SCHEDULING_H */

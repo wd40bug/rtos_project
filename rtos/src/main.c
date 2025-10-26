@@ -7,12 +7,14 @@
 task_err ping(task_data* task) {
   while (1) {
     printf("ping\n");
+    yield();
   }
 }
 
 task_err pong(task_data* task) {
   while (1) {
     printf("pong\n");
+    yield();
   }
 }
 
