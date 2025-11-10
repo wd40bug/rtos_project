@@ -4,6 +4,11 @@
 #include "serial.h"
 #include <stdbool.h>
 
+
+void I2C_Read(int DevAddress, int *pData, int Size) {
+  // Stub function for I2C read
+}
+
 void toggle_on(void) {
   led_on();
 }
