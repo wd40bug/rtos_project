@@ -43,7 +43,7 @@ typedef enum {
 
 extern sched_err scheduling_add_task(TASK task, uint32_t priority);
 extern sched_err yield();
-#define PRIORITIES 1
+#define PRIORITIES 2
 
 //--------TIMING--------------
 typedef enum {
