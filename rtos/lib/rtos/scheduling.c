@@ -1,6 +1,7 @@
 #include "scheduling.h"
-#include "common.h"
-#include "svc.h"
+#include "printf.h"
+#include "queue.h"
+#include "timing.h"
 #include <stddef.h>
 #include <stm32l476xx.h>
 #include <string.h>
@@ -8,27 +9,51 @@
 // NOTE: No tasks can ever be removed for now XD
 
 const uint32_t MAX_INTERRUPT_PRIORITY = UINT32_MAX;
-#define MAX_TASKS 4
 #define MAX_TASK_STACK_SIZE 512 // 2kb
 
-enum { TASK_RUNNING, TASK_READY, TASK_STOPPED, TASK_DEAD };
+typedef enum { TASK_READY, TASK_SLEEPING, TASK_DONE } task_status;
+typedef enum { NORMAL_TASK, IDLE_TASK, RESTORE_TASK } task_specialness;
 
 typedef struct {
   volatile uint32_t* stack_top;
-  uint8_t task_status;
+  task_status status;
   task_data task_data;
+  task_specialness specialness;
+  uint64_t ticks_started;
 } task_data_internal;
+typedef task_data_internal* tdi;
+
+QUEUE_INIT(tdi, MAX_TASKS);
+tdi_MAX_TASKS_queue priorities[PRIORITIES];
+int32_t num_done = 0;
 
 static bool is_running = false;
 // To potentially restore the calling function when all tasks end
 volatile uint32_t restore_stack[MAX_TASK_STACK_SIZE];
 volatile task_data_internal restore_task = {
     .stack_top = restore_stack + MAX_TASK_STACK_SIZE - 1, // Filled in on switch
-    .task_status = TASK_READY,
+    .status = TASK_READY,
+    .specialness = RESTORE_TASK,
     .task_data = (task_data){
                              .task_handle = MAX_TASKS, // Invalid value
-    }
+                             .priority = PRIORITIES
+    },
+    .ticks_started = UINT64_MAX
 };
+
+volatile task_data_internal idle_task;
+task_err idle(task_data* td) {
+  (void)td;
+  while (1) {
+    __WFE();
+  }
+}
+
+void scheduling_return() {
+  __disable_irq();
+  // TODO: this
+  __enable_irq();
+}
 
 // current task!
 // Set to restore_task to save stack properly
@@ -47,46 +72,9 @@ void generate_pend_sv() {
   SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
-sched_err scheduling_init() {
-  return SCHED_ERR_OK;
-}
-
-sched_err scheduling_run() {
-  // Set SysTick to highest possible priority
-  SCB->SHP[1] |= 0x11 << 24;
-  // Set PenSV to lower priority so it won't pre-empt a handler
-  SCB->SHP[2] |= 0xFF << 24;
-  // Configure clk to tick
-  SysTick->LOAD = SysTick->CALIB; // 10ms according to ARM, but I think it's 1ms
-  SysTick->VAL = 0;
-  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk |
-                  SysTick_CTRL_ENABLE_Msk;
-  // Make sure in priviledged mode
-  if ((__get_CONTROL() & CONTROL_nPRIV_Msk) == 0) {
-    // TODO:
-    // EnablePrivilegedMode();
-  }
-  // Point PSP into IDLE_TASK stack
-  __asm__ volatile("mov r0, %[IDLE_STACK]\n\t"
-                   "msr psp, r0\n\t"
-                   "isb"
-                   :
-                   : [IDLE_STACK] "r"(restore_task.stack_top)
-                   : "r0");
-
-  // Start switching!
-  is_running = true;
-  generate_pend_sv();
-  // Theoretically anything past this point should be impossible
-  printf("Uhhhhhhhhh\n");
-  return SCHED_ERR_UNEXPECTED_RETURN;
-}
-
-sched_err scheduling_add_task(TASK task) {
-  if (num_tasks == MAX_TASKS) {
-    return SCHED_ERR_TOO_MANY_TASKS;
-  }
-  size_t handle = num_tasks++;
+static task_data_internal create_task(
+    TASK task, uint32_t handle, uint32_t priority, uint8_t specialness
+) {
   // Stacks are top down
   uint32_t* stack_top = stacks[handle] + MAX_TASK_STACK_SIZE - 1;
   xPSR_Type xPSR = {
@@ -110,7 +98,7 @@ sched_err scheduling_add_task(TASK task) {
       .r3 = 0,
       .r12 = 0,
       // TODO: return address
-      .lr = 0,
+      .lr = (uint32_t)scheduling_return,
       .return_address = (uint32_t*)task,
       .xpsr = xPSR.w
   };
@@ -130,29 +118,83 @@ sched_err scheduling_add_task(TASK task) {
   stack_top -= size_scaled;
   memcpy(stack_top, &stack, sizeof(stack));
 
-  tasks[handle] = (task_data_internal){
+  return (task_data_internal){
       .stack_top = stack_top,
       .task_data =
           (task_data){
                       .task_handle = handle,
+                      .priority = priority,
                       },
-      .task_status = TASK_READY
+      .specialness = specialness,
+      .status = TASK_READY
   };
+}
+
+sched_err scheduling_init() {
+  // Set SysTick to highest possible priority
+  SCB->SHP[1] |= 0x11 << 24;
+  // Set PenSV to lower priority so it won't pre-empt a handler
+  SCB->SHP[2] |= 0xFF << 24;
+
+  idle_task = create_task(idle, MAX_TASKS, PRIORITIES, IDLE_TASK);
   return SCHED_ERR_OK;
 }
 
-void TaskSwitchContext(void) {
-  // TODO: Account for task states and priority
-  static size_t task_index = 0;
-  if (num_tasks == 0) {
-    current_task = &restore_task;
-    return;
-  }
-  current_task = &tasks[task_index];
-  task_index = (task_index + 1) % num_tasks;
+sched_err scheduling_run() {
+  // Point PSP into IDLE_TASK stack
+  __asm__ volatile("mov r0, %[IDLE_STACK]\n\t"
+                   "msr psp, r0\n\t"
+                   "isb"
+                   :
+                   : [IDLE_STACK] "r"(restore_task.stack_top)
+                   : "r0");
+
+  // Start switching!
+  is_running = true;
+  generate_pend_sv();
+  // Anything past this point should be impossible
+  printf("Uhhhhhhhhh\n");
+  return SCHED_ERR_UNEXPECTED_RETURN;
 }
 
-// Side stuff 
+sched_err scheduling_add_task(TASK task, uint32_t priority) {
+  if (priority >= PRIORITIES) {
+    return SCHED_ERR_INVALID_PRIORITY;
+  }
+  size_t handle = num_tasks++;
+
+  tasks[handle] = create_task(task, handle, priority, NORMAL_TASK);
+  if (!tdi_MAX_TASKS_queue_enqueue(&priorities[priority], &tasks[handle])) {
+    return SCHED_ERR_TOO_MANY_TASKS;
+  }
+  return SCHED_ERR_OK;
+}
+
+void next_task(void) {
+  if (current_task->status == TASK_READY &&
+      current_task->specialness == NORMAL_TASK) {
+    tdi_MAX_TASKS_queue_enqueue(
+        &priorities[current_task->task_data.priority],
+        (task_data_internal*)current_task
+    );
+  }
+  task_data_internal* next_task = NULL;
+  for (int i = 0; i < PRIORITIES; i++) {
+    if (tdi_MAX_TASKS_queue_dequeue(&priorities[i], &next_task)) {
+      break; // Valid task
+    }
+  }
+  if (next_task == NULL) {
+    if (num_done == num_tasks) {
+      next_task = (task_data_internal*)&restore_task;
+    } else {
+      next_task = (task_data_internal*)&idle_task;
+    }
+  }
+  current_task = next_task;
+}
+
+// Side stuff
 void PendSV_C() {
   SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
 }
@@ -189,7 +231,7 @@ void PendSV_Handler() {
       // Flush instruction pipeline
       "isb\n\t"
       // Switch
-      "bl TaskSwitchContext\n\t"
+      "bl next_task\n\t"
       // Re-enable interrupt
       "mov r0, #0\n\t"
       "msr basepri, r0\n\t"
@@ -212,60 +254,72 @@ void PendSV_Handler() {
       :
       : [CurrentTask] "r"(&current_task),
         [MAX_INTERRUPT_PRIORITY] "i"(MAX_INTERRUPT_PRIORITY)
-      : 
+      :
   );
   __builtin_unreachable();
 }
 
+#define TICKS_PER_TASK 10
+
 bool should_switch() {
-  return is_running;
+  static uint32_t tick_cnt = 0;
+  bool result = is_running && tick_cnt == 0;
+  tick_cnt = (tick_cnt + 1) % TICKS_PER_TASK;
+  return result;
 }
 
-void SysTick_Handler(void) {
-  HAL_IncTick();
+void scheduling_tick() {
   if (should_switch()) {
-    // generate_pend_sv();
+    generate_pend_sv();
   }
-}
-
-#define HALT_IF_DEBUGGING()                                                    \
-  do {                                                                         \
-    if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) {                    \
-      __asm__ volatile("bkpt 1");                                              \
-    }                                                                          \
-  } while (0)
-
-void HardFault_Handler(void) {
-  ShortStackFrame* CSF;
-  __asm__ volatile("tst lr, #4 \n\t"
-                   "ite eq \n\t"
-                   "mrseq r0, msp\n\t"
-                   "mrsne r0, psp\n\t"
-                   "str r0, %[CSF]\n\t"
-                   : [CSF] "=m"(CSF)
-                   :
-                   : "r0");
-
-  HALT_IF_DEBUGGING();
-
-  printf("Hard fault!\n");
-  if (SCB->CFSR & SCB_CFSR_USGFAULTSR_Msk) {
-    printf("Usage fault\n");
-  }
-  if (SCB->CFSR & SCB_CFSR_BUSFAULTSR_Msk) {
-    printf("Bus fault\n");
-    if (SCB->CFSR & SCB_CFSR_IMPRECISERR_Msk) {
-      printf("Imprecise... fuck\n");
-    }
-  }
-  if (SCB->CFSR & SCB_CFSR_MEMFAULTSR_Msk) {
-    printf("MemManage fault\n");
-  }
-  while (1)
-    ;
 }
 
 sched_err yield() {
+  if (!is_running) {
+    return SCHED_ERR_NOT_RUNNING;
+  }
   generate_pend_sv();
+  return SCHED_ERR_OK;
+}
+
+task_data get_current_task() {
+  __disable_irq();
+  task_data ret = current_task->task_data;
+  __enable_irq();
+  return ret;
+}
+
+sched_err wake_task(uint32_t handle) {
+  if (handle >= MAX_TASKS) {
+    return SCHED_ERR_INVALID_HANDLE;
+  }
+  task_data_internal* task = &tasks[handle];
+  if (task->status != TASK_SLEEPING) {
+    return SCHED_ERR_NOT_ASLEEP;
+  }
+  uint32_t task_prio = task->task_data.priority;
+  if (task_prio >= PRIORITIES) {
+    return SCHED_ERR_INVALID_PRIORITY;
+  }
+  tasks[handle].status = TASK_READY;
+  tdi_MAX_TASKS_queue_enqueue(&priorities[task_prio], task);
+  if (task_prio < current_task->task_data.priority) {
+    generate_pend_sv();
+  }
+  return SCHED_ERR_OK;
+}
+
+sched_err sleep_task(uint32_t handle) {
+  if (handle >= MAX_TASKS) {
+    return SCHED_ERR_INVALID_HANDLE;
+  }
+  task_data_internal* task = &tasks[handle];
+  if (task->status != TASK_READY) {
+    return SCHED_ERR_NOT_READY;
+  }
+  task->status = TASK_SLEEPING;
+  if (current_task->task_data.task_handle == handle) {
+    generate_pend_sv();
+  }
   return SCHED_ERR_OK;
 }
