@@ -1,15 +1,17 @@
 #include "serial.h"
-#include "queue.h"
 #include "scheduling.h"
 #include "stm32l476xx.h"
 #include <stdbool.h>
 #include <stddef.h>
 
-#define QUEUE_SIZE 256
-QUEUE_INIT(char, QUEUE_SIZE);
+#define QUEUE_CAPACITY 256
+#define QUEUE_TYPENAME print_queue
+#define QUEUE_TYPE char
+#include "queue.h"
+
 #define CBUFFERS_LEN MAX_TASKS + 1
-char_QUEUE_SIZE_queue cbuffers[CBUFFERS_LEN];
-char_QUEUE_SIZE_queue flush_buffer;
+print_queue cbuffers[CBUFFERS_LEN];
+print_queue flush_buffer;
 
 static void enable_txe_interrupt() {
   USART2->CR1 |= USART_CR1_TXEIE;
@@ -19,11 +21,11 @@ static void disable_txe_interrupt() {
   USART2->CR1 &= ~USART_CR1_TXEIE;
 }
 
-static void flush(char_QUEUE_SIZE_queue* Q) {
+static void flush(print_queue* Q) {
   __disable_irq();
   char item = '\0';
-  while (char_QUEUE_SIZE_queue_dequeue(Q, &item)) {
-    if (!char_QUEUE_SIZE_queue_enqueue(&flush_buffer, item)) {
+  while (print_queue_dequeue(Q, &item)) {
+    if (!print_queue_enqueue(&flush_buffer, item)) {
       // TODO: Handle full flush queue
       // yield???
       while (1) {
@@ -59,15 +61,15 @@ void init_serial(uint32_t baud) {
   USART2->CR1 |= USART_CR1_UE | USART_CR1_TE | USART_CR1_RE; // enable uart
   NVIC_EnableIRQ(USART2_IRQn);
 
-  char_QUEUE_SIZE_queue_init(&flush_buffer);
+  print_queue_init(&flush_buffer);
   for (int i = 0; i < MAX_TASKS; i++) {
-    char_QUEUE_SIZE_queue_init(&cbuffers[i]);
+    print_queue_init(&cbuffers[i]);
   }
 }
 
 void _putchar(char character) {
-  char_QUEUE_SIZE_queue* Q = &cbuffers[get_current_task().task_handle];
-  if (!char_QUEUE_SIZE_queue_enqueue(Q, character)) {
+  print_queue* Q = &cbuffers[get_current_task().task_handle];
+  if (!print_queue_enqueue(Q, character)) {
     // TODO: Handle full queue
     while (1) {
     }
@@ -77,11 +79,11 @@ void _putchar(char character) {
 }
 
 void USART2_IRQHandler() {
-  if (char_QUEUE_SIZE_queue_is_empty(&flush_buffer)) {
+  if (print_queue_is_empty(&flush_buffer)) {
     disable_txe_interrupt();
   } else if ((USART2->ISR & USART_ISR_TXE_Msk)) {
     char item;
-    char_QUEUE_SIZE_queue_dequeue(&flush_buffer, &item);
+    print_queue_dequeue(&flush_buffer, &item);
     USART2->TDR = item;
   }
 }

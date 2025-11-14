@@ -1,6 +1,5 @@
 #include "scheduling.h"
 #include "printf.h"
-#include "queue.h"
 #include "timing.h"
 #include <stddef.h>
 #include <stm32l476xx.h>
@@ -22,9 +21,12 @@ typedef struct {
   uint64_t ticks_started;
 } task_data_internal;
 typedef task_data_internal* tdi;
+#define QUEUE_TYPENAME task_queue
+#define QUEUE_TYPE task_data_internal*
+#define QUEUE_CAPACITY MAX_TASKS
+#include "queue.h"
 
-QUEUE_INIT(tdi, MAX_TASKS);
-tdi_MAX_TASKS_queue priorities[PRIORITIES];
+task_queue priorities[PRIORITIES];
 int32_t num_done = 0;
 
 static bool is_running = false;
@@ -164,7 +166,7 @@ sched_err scheduling_add_task(TASK task, uint32_t priority) {
   size_t handle = num_tasks++;
 
   tasks[handle] = create_task(task, handle, priority, NORMAL_TASK);
-  if (!tdi_MAX_TASKS_queue_enqueue(&priorities[priority], &tasks[handle])) {
+  if (!task_queue_enqueue(&priorities[priority], &tasks[handle])) {
     return SCHED_ERR_TOO_MANY_TASKS;
   }
   return SCHED_ERR_OK;
@@ -173,14 +175,14 @@ sched_err scheduling_add_task(TASK task, uint32_t priority) {
 void next_task(void) {
   if (current_task->status == TASK_READY &&
       current_task->specialness == NORMAL_TASK) {
-    tdi_MAX_TASKS_queue_enqueue(
+    task_queue_enqueue(
         &priorities[current_task->task_data.priority],
         (task_data_internal*)current_task
     );
   }
   task_data_internal* next_task = NULL;
   for (int i = 0; i < PRIORITIES; i++) {
-    if (tdi_MAX_TASKS_queue_dequeue(&priorities[i], &next_task)) {
+    if (task_queue_dequeue(&priorities[i], &next_task)) {
       break; // Valid task
     }
   }
@@ -302,7 +304,7 @@ sched_err wake_task(uint32_t handle) {
     return SCHED_ERR_INVALID_PRIORITY;
   }
   tasks[handle].status = TASK_READY;
-  tdi_MAX_TASKS_queue_enqueue(&priorities[task_prio], task);
+  task_queue_enqueue(&priorities[task_prio], task);
   if (task_prio < current_task->task_data.priority) {
     generate_pend_sv();
   }

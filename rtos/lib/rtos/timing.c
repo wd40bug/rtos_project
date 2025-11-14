@@ -1,6 +1,10 @@
 #include "timing.h"
-#include "queue.h"
 #include "scheduling.h"
+
+#define QUEUE_TYPENAME index_queue
+#define QUEUE_TYPE size_t
+#define QUEUE_CAPACITY MAX_DELAYS
+#include "queue.h"
 
 static uint64_t ticks = 0;
 
@@ -13,13 +17,13 @@ static timing_node timers[MAX_DELAYS];
 static size_t head = MAX_DELAYS;
 static uint32_t num_timers = 0;
 
-QUEUE_INIT(size_t, MAX_DELAYS);
-static size_t_MAX_DELAYS_queue free_queue;
+// QUEUE_INIT(size_t, MAX_DELAYS);
+static index_queue free_queue;
 
 void timing_init() {
-  size_t_MAX_DELAYS_queue_init(&free_queue);
+  index_queue_init(&free_queue);
   for (int i = 0; i < MAX_DELAYS; i++) {
-    size_t_MAX_DELAYS_queue_enqueue(&free_queue, i);
+    index_queue_enqueue(&free_queue, i);
   }
 }
 
@@ -28,7 +32,7 @@ void timing_tick() {
   if (head < MAX_DELAYS && timers[head].time <= ticks) {
     sched_err err = wake_task(timers[head].handle);
     if (err == SCHED_ERR_OK) {
-      size_t_MAX_DELAYS_queue_enqueue(&free_queue, head);
+      index_queue_enqueue(&free_queue, head);
       head = timers[head].next;
       num_timers--;
     }
@@ -41,7 +45,7 @@ timer_err timing_delay_ms(uint32_t delay) {
     return TIMER_TOO_MANY_TIMERS;
   }
   size_t new_index;
-  if (!size_t_MAX_DELAYS_queue_dequeue(&free_queue, &new_index)) {
+  if (!index_queue_dequeue(&free_queue, &new_index)) {
     return TIMER_TOO_MANY_TIMERS;
   }
   timing_node new_node = {
