@@ -198,7 +198,7 @@ void next_task(void) {
 
 // Side stuff
 void PendSV_C() {
-  SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
+  // SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
 }
 
 void PendSV_Handler() {

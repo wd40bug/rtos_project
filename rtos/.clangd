@@ -7,6 +7,9 @@ CompileFlags:
   - -DUNITY_EXCLUDE_MATH_H
   - -DUNITY_OUTPUT_CHAR
   - -DMACRO_DEBUG
+  - --target=arm-none-eabi
   # - -Dprintf(...)=((void)0)
+  BuiltinHeaders: QueryDriver
 Completion:
   HeaderInsertion: Never
+

@@ -236,43 +236,5 @@ size_t LL_APPEND_ARRAY(LINKED_LIST_TYPENAME* ll, size_t array_len, LINKED_LIST_T
 
 // TODO: separate file for UNDEFS
 #ifndef LINKED_LIST_DONT_UNDEF
-#undef LL_NONE
-#undef LL_NEXT
-#undef LL_NODE_NAME
-#undef LL_QUEUE_NAME
-
-#undef LL_INIT
-#undef LL_SIZE
-#undef LL_CAPACITY
-#undef LL_INSERT_AT
-#undef LL_DEL_AT
-#undef LL_PUSH_BACK
-#undef LL_PUSH_FRONT
-#undef LL_POP_BACK
-#undef LL_POP_FRONT
-#undef LL_TO_ARRAY
-#undef LL_APPEND_ARRAY
-
-#undef LL_NEW_NODE
-#undef LL_DEL_NODE
-#undef LL_END
-#undef LL_PREV
-// Undef QUEUE stuff
-#undef __Q_ADD
-#undef Q_INIT_FN
-#undef Q_IS_FULL_FN
-#undef Q_IS_EMPTY_FN
-#undef Q_ENQUEUE_FN
-#undef Q_DEQUEUE_FN
-#undef Q_SIZE_FN
-#undef Q_FREE_FN
-#undef QUEUE_CAPACITY
-#undef QUEUE_TYPE
-#undef QUEUE_TYPENAME
-#undef QUEUE_DONT_UNDEF
-
-#undef LINKED_LIST_CAPACITY
-#undef LINKED_LIST_TYPE
-#undef LINKED_LIST_TYPENAME
-#undef LINKED_LIST_DONT_UNDEF
+#include "linkedlist_undef.h"
 #endif /* LINKED_LIST_DONT_UNDEF */

@@ -27,7 +27,7 @@ void rtos_init() {
       ;
   };
 
-  while (timing_get_ticks() != 1000) {
+  while (timing_get_ticks() != 2000) {
   }
   timing_init();
   init_serial(115200);

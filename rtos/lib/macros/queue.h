@@ -90,16 +90,5 @@ size_t Q_FREE_FN(QUEUE_TYPENAME* Q) {
 
 //TODO: separate file for UNDEFS
 #ifndef QUEUE_DONT_UNDEF
-#undef __Q_ADD
-#undef Q_INIT_FN
-#undef Q_IS_FULL_FN
-#undef Q_IS_EMPTY_FN
-#undef Q_ENQUEUE_FN
-#undef Q_DEQUEUE_FN
-#undef Q_SIZE_FN
-#undef Q_FREE_FN
-#undef QUEUE_CAPACITY
-#undef QUEUE_TYPE
-#undef QUEUE_TYPENAME
-#undef QUEUE_DONT_UNDEF
+#include "queue_undef.h"
 #endif /* QUEUE_DONT_UNDEF */
