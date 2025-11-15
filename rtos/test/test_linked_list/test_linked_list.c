@@ -1,6 +1,5 @@
 #include "printf.h"
 #include "rtos.h"
-#include "stm32l476xx.h"
 #include <unity.h>
 
 #define CAPACITY 5
@@ -30,7 +29,7 @@ void test_empty_after_init(void) {
   int test[CAPACITY] = {0};
   int expected[CAPACITY] = {0};
   TEST_ASSERT_EQUAL(0, test_list_to_array(&list, CAPACITY, expected));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, test, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, test, CAPACITY);
 }
 
 void test_push_back(void) {
@@ -41,7 +40,7 @@ void test_push_back(void) {
   int actual[CAPACITY] = {0};
   int expected[CAPACITY] = {0, 1, 2, 3, 4};
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
 }
 
 void test_push_front(void) {
@@ -52,7 +51,7 @@ void test_push_front(void) {
   int expected[CAPACITY] = {4, 3, 2, 1, 0};
   int actual[CAPACITY] = {0};
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
 }
 
 void test_append_array(void) {
@@ -64,7 +63,7 @@ void test_append_array(void) {
       test_list_append_array(&list, CAPACITY, expected)
   );
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
   // Test too big array
   test_list_init(&list);
   TEST_ASSERT_EQUAL(
@@ -72,7 +71,7 @@ void test_append_array(void) {
       test_list_append_array(&list, CAPACITY + 1, expected)
   );
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
 }
 
 void test_pop_back(void) {
@@ -89,7 +88,7 @@ void test_pop_back(void) {
     TEST_ASSERT_EQUAL(i, res);
     TEST_ASSERT_EQUAL(i - 1, test_list_to_array(&list, CAPACITY, actual));
     if (i != 1) {
-      TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, i - 1);
+      TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, i - 1);
     }
   }
 }
@@ -111,7 +110,7 @@ void test_pop_front(void) {
         test_list_to_array(&list, CAPACITY, actual)
     );
     if (i != CAPACITY - 1) {
-      TEST_ASSERT_EQUAL_UINT32_ARRAY(
+      TEST_ASSERT_EQUAL_INT_ARRAY(
           &expected[i + 1],
           actual,
           CAPACITY - 1 - i
@@ -130,28 +129,28 @@ void test_insert(void) {
   TEST_ASSERT_TRUE(test_list_insert_at(&list, 2, 1));
   TEST_ASSERT_TRUE(test_list_insert_at(&list, 4, 3));
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
   // Test insert at 0
   test_list_init(&list);
   int initial_at_0[4] = {2, 3, 4, 5};
   TEST_ASSERT_EQUAL(4, test_list_append_array(&list, 4, initial_at_0));
   TEST_ASSERT_TRUE(test_list_insert_at(&list, 1, 0));
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
   // Test insert at end
   test_list_init(&list);
   int initial_at_end[4] = {1, 2, 3, 4};
   TEST_ASSERT_EQUAL(4, test_list_append_array(&list, 4, initial_at_end));
   TEST_ASSERT_TRUE(test_list_insert_at(&list, 5, 4));
   TEST_ASSERT_EQUAL(CAPACITY, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected, actual, CAPACITY);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected, actual, CAPACITY);
   // Test insert invalid
   test_list_init(&list);
   int initial_invalid[2] = {0, 1};
   TEST_ASSERT_EQUAL(2, test_list_append_array(&list, 2, initial_invalid));
   TEST_ASSERT_FALSE(test_list_insert_at(&list, 5, 4));
   TEST_ASSERT_EQUAL(2, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(initial_invalid, actual, 2);
+  TEST_ASSERT_EQUAL_INT_ARRAY(initial_invalid, actual, 2);
 }
 
 void test_del(void) {
@@ -167,7 +166,7 @@ void test_del(void) {
   TEST_ASSERT_TRUE(test_list_del_at(&list, 2, &item));
   TEST_ASSERT_EQUAL(4, item);
   TEST_ASSERT_EQUAL(3, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected_in_between, actual, 3);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected_in_between, actual, 3);
   // Test delete end
   test_list_init(&list);
   TEST_ASSERT_EQUAL(CAPACITY, test_list_append_array(&list, CAPACITY, initial));
@@ -175,7 +174,7 @@ void test_del(void) {
   TEST_ASSERT_TRUE(test_list_del_at(&list, 4, &item));
   TEST_ASSERT_EQUAL(5, item);
   TEST_ASSERT_EQUAL(4, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected_at_end, actual, 4);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected_at_end, actual, 4);
   // Test delete beginning
   test_list_init(&list);
   TEST_ASSERT_EQUAL(CAPACITY, test_list_append_array(&list, CAPACITY, initial));
@@ -183,7 +182,7 @@ void test_del(void) {
   TEST_ASSERT_TRUE(test_list_del_at(&list, 0, &item));
   TEST_ASSERT_EQUAL(1, item);
   TEST_ASSERT_EQUAL(4, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(expected_at_beginning, actual, 4);
+  TEST_ASSERT_EQUAL_INT_ARRAY(expected_at_beginning, actual, 4);
   // Test invalid delete
   test_list_init(&list);
   int initial_invalid[2] = {0, 1};
@@ -195,7 +194,7 @@ void test_del(void) {
   TEST_ASSERT_FALSE(test_list_del_at(&list, 4, &item));
   TEST_ASSERT_EQUAL(INT_MAX, item);
   TEST_ASSERT_EQUAL(2, test_list_to_array(&list, CAPACITY, actual));
-  TEST_ASSERT_EQUAL_UINT32_ARRAY(initial_invalid, actual, 2);
+  TEST_ASSERT_EQUAL_INT_ARRAY(initial_invalid, actual, 2);
   // Test delete empty list
   test_list_init(&list);
   item = INT_MAX;
@@ -208,9 +207,7 @@ void test_del(void) {
 }
 
 int main() {
-  SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
   rtos_init();
-  // printf("Beginning testing\n");
 
   UNITY_BEGIN();
   RUN_TEST(test_size_t_size);

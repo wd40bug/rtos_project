@@ -88,7 +88,6 @@ size_t Q_FREE_FN(QUEUE_TYPENAME* Q) {
   return QUEUE_CAPACITY - Q->size;
 }
 
-//TODO: separate file for UNDEFS
 #ifndef QUEUE_DONT_UNDEF
 #include "queue_undef.h"
 #endif /* QUEUE_DONT_UNDEF */

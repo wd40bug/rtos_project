@@ -28,7 +28,7 @@
 #endif /* ifndef LINKED_LIST_CAPACITY */
 
 #if LINKED_LIST_CAPACITY == 0
-#error LINKEDLINKED_LIST_CAPACITY cannot be 0
+#error LINKED_LIST_CAPACITY cannot be 0
 #endif /* if LINKED_LIST_CAPACITY == 0 */
 
 #define LL_INIT join2(LINKED_LIST_TYPENAME, init)
@@ -46,14 +46,14 @@
 #define LL_NONE LINKED_LIST_CAPACITY
 #define LL_NEXT(n) ll->nodes[n].next
 #define LL_NODE_NAME join2(LINKED_LIST_TYPENAME, node)
-#define LL_QUEUE_NAME join2(LINKED_LIST_TYPENAME, free_queue)
+#define LL_QUEUE_NAME join3(_, LINKED_LIST_TYPENAME, free_queue)
 
 #define LL_NEW_NODE join3(_, LINKED_LIST_TYPENAME, new_node)
 #define LL_DEL_NODE join3(_, LINKED_LIST_TYPENAME, del_node)
 #define LL_END join3(_, LINKED_LIST_TYPENAME, end)
 #define LL_PREV join3(_, LINKED_LIST_TYPENAME, prev)
 
-#define QUEUE_TYPENAME join2(LINKED_LIST_TYPENAME, free_queue)
+#define QUEUE_TYPENAME LL_QUEUE_NAME
 #define QUEUE_TYPE size_t
 #define QUEUE_CAPACITY LINKED_LIST_CAPACITY
 #define QUEUE_DONT_UNDEF
@@ -234,7 +234,6 @@ size_t LL_APPEND_ARRAY(LINKED_LIST_TYPENAME* ll, size_t array_len, LINKED_LIST_T
   return array_len;
 }
 
-// TODO: separate file for UNDEFS
 #ifndef LINKED_LIST_DONT_UNDEF
 #include "linkedlist_undef.h"
 #endif /* LINKED_LIST_DONT_UNDEF */
