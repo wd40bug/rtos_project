@@ -17,7 +17,6 @@ static timing_node timers[MAX_DELAYS];
 static size_t head = MAX_DELAYS;
 static uint32_t num_timers = 0;
 
-// QUEUE_INIT(size_t, MAX_DELAYS);
 static index_queue free_queue;
 
 void timing_init() {
