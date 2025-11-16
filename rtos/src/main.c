@@ -34,9 +34,9 @@ task_err long_calculation(task_data* task) {
 
 int main(void) {
   rtos_init();
-  scheduling_add_task(ping, 0);
-  scheduling_add_task(pong, 0);
-  scheduling_add_task(long_calculation, 1);
+  scheduling_add_task(ping, 0, NULL);
+  scheduling_add_task(pong, 0, NULL);
+  scheduling_add_task(long_calculation, 1, NULL);
   printf("Everything Initialized!\n");
   rtos_run();
   while (1) {

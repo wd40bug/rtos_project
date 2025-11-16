@@ -10,11 +10,11 @@
 #define MAX_TASKS 4
 
 sched_err scheduling_init();
-sched_err scheduling_add_task(TASK task, uint32_t priority);
+sched_err scheduling_add_task(TASK task, uint32_t priority, TASK_HANDLE* handle);
 sched_err scheduling_run();
 sched_err yield();
-sched_err sleep_task(uint32_t handle);
-sched_err wake_task(uint32_t handle);
+sched_err sleep_task(TASK_HANDLE handle);
+sched_err wake_task(TASK_HANDLE handle);
 
 void scheduling_tick();
 

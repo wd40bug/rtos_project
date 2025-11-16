@@ -96,12 +96,9 @@ bool LL_NEW_NODE(
     size_t next,
     size_t* index
 ) {
+  NULL_GUARD(size_t, index);
   if (next != ll->head && prev >= LL_NONE) {
     return false;
-  }
-  size_t discard_index;
-  if (index == NULL) {
-    index = &discard_index;
   }
   if (!Q_DEQUEUE_FN(&ll->free, index)) {
     return false;
@@ -117,12 +114,9 @@ bool LL_NEW_NODE(
 }
 
 bool LL_DEL_NODE(LINKED_LIST_TYPENAME* ll, size_t index, size_t prev, LINKED_LIST_TYPE* ret) {
+  NULL_GUARD(LINKED_LIST_TYPE, ret);
   if (index >= LL_NONE) {
     return false;
-  }
-  LINKED_LIST_TYPE ret_backup;
-  if (ret == NULL) {
-    ret = &ret_backup;
   }
   *ret = ll->nodes[index].val;
   if (ll->head == index) {
@@ -137,10 +131,7 @@ bool LL_DEL_NODE(LINKED_LIST_TYPENAME* ll, size_t index, size_t prev, LINKED_LIS
 }
 
 size_t LL_END(LINKED_LIST_TYPENAME* ll, size_t* prev) {
-  size_t backup_prev;
-  if (prev == NULL) {
-    prev = &backup_prev;
-  }
+  NULL_GUARD(size_t, prev);
   *prev = LL_NONE;
   size_t node = ll->head;
   while (node < LL_NONE && LL_NEXT(node) < LL_NONE) {
@@ -238,6 +229,7 @@ size_t LL_APPEND_ARRAY(LINKED_LIST_TYPENAME* ll, size_t array_len, LINKED_LIST_T
 }
 
 bool LL_GET (LINKED_LIST_TYPENAME* ll, size_t index, LINKED_LIST_TYPE* item) {
+  NULL_GUARD(LINKED_LIST_TYPE, item);
   if (index >= LL_SIZE(ll)) {
     return false;
   }

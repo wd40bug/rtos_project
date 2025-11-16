@@ -14,6 +14,8 @@
 #undef SL_TO_ARRAY 
 #undef SL_ADD_ARRAY 
 #undef SL_GET
+#undef SL_GET_BACK
+#undef SL_GET_FRONT
 
 #undef SL_LL_NAME 
 

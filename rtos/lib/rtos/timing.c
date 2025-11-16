@@ -3,7 +3,7 @@
 
 typedef struct{
   uint64_t time;
-  uint32_t handle;
+  TASK_HANDLE handle;
 } timer;
 int timer_comparator(timer a, timer b) {
   //NOTE: Done this way to avoid overflow
@@ -41,7 +41,7 @@ void timing_tick() {
 }
 
 timer_err timing_delay_ms(uint32_t delay) {
-  uint32_t current_task = get_current_task().task_handle;
+  TASK_HANDLE current_task = get_current_task().task_handle;
   if (timer_list_size(&timers) >= MAX_DELAYS) {
     return TIMER_TOO_MANY_TIMERS;
   }

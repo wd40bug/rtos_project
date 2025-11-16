@@ -13,6 +13,34 @@
 // Stack limit
 // LED
 
+//-------DEFINITIONS----------
+typedef struct __attribute__((packed)) {
+  uint32_t r0;
+  uint32_t r1;
+  uint32_t r2;
+  uint32_t r3;
+  uint32_t r12;
+  uint32_t lr;
+  uint32_t* return_address;
+  uint32_t xpsr;
+} ShortStackFrame;
+
+typedef struct __attribute__ ((packed)) {
+  uint32_t r4;
+  uint32_t r5;
+  uint32_t r6;
+  uint32_t r7;
+  uint32_t r8;
+  uint32_t r9;
+  uint32_t r10;
+  uint32_t r11;
+  uint32_t exc_return;
+  ShortStackFrame short_frame;
+} FullStackFrame;
+
+typedef uint32_t TASK_HANDLE;
+typedef uint32_t MESSAGE_QUEUE_HANDLE;
+
 //--------RTOS----------------
 void rtos_init();
 void rtos_run();
@@ -41,7 +69,7 @@ typedef enum {
   SCHED_ERR_INVALID_HANDLE,
 } sched_err;
 
-extern sched_err scheduling_add_task(TASK task, uint32_t priority);
+extern sched_err scheduling_add_task(TASK task, uint32_t priority, TASK_HANDLE* handle);
 extern sched_err yield();
 #define PRIORITIES 2
 
@@ -65,33 +93,16 @@ extern void wait_gpio_event(); // Syscall
 //--------UART----------------
 extern void wait_uart();
 
+//-------MESSAGE-QUEUES-------
+typedef enum {
+  MESSAGE_QUEUE_OK,
+  MESSAGE_QUEUE_TOO_MANY_QUEUES,
+  MESSAGE_QUEUE_EXISTS,
+} message_queue_error;
+extern uint32_t create_message_queue(TASK_HANDLE handle);
+
 //--------SYSCALLS------------
-// TODO: MAKE SURE SYSCALLS are above PendSV in priority
 extern void gain_priviledge();
 extern void relinquish_priviledge();
 
-//-------DEFINITIONS----------
-typedef struct __attribute__((packed)) {
-  uint32_t r0;
-  uint32_t r1;
-  uint32_t r2;
-  uint32_t r3;
-  uint32_t r12;
-  uint32_t lr;
-  uint32_t* return_address;
-  uint32_t xpsr;
-} ShortStackFrame;
-
-typedef struct __attribute__ ((packed)) {
-  uint32_t r4;
-  uint32_t r5;
-  uint32_t r6;
-  uint32_t r7;
-  uint32_t r8;
-  uint32_t r9;
-  uint32_t r10;
-  uint32_t r11;
-  uint32_t exc_return;
-  ShortStackFrame short_frame;
-} FullStackFrame;
 #endif

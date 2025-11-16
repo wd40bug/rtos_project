@@ -1,4 +1,5 @@
 #include "macro.h"
+#include "util.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -70,6 +71,7 @@ bool Q_ENQUEUE_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE item) {
 }
 
 bool Q_DEQUEUE_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE* item) {
+  NULL_GUARD(QUEUE_TYPE, item);
   if (Q_IS_EMPTY_FN(Q)) {
     return false;
   }

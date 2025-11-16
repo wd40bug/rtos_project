@@ -1,6 +1,7 @@
 #include "scheduling.h"
 #include "printf.h"
 #include "timing.h"
+#include "util.h"
 #include <stddef.h>
 #include <stm32l476xx.h>
 #include <string.h>
@@ -75,7 +76,7 @@ void generate_pend_sv() {
 }
 
 static task_data_internal create_task(
-    TASK task, uint32_t handle, uint32_t priority, uint8_t specialness
+    TASK task, TASK_HANDLE handle, uint32_t priority, uint8_t specialness
 ) {
   // Stacks are top down
   uint32_t* stack_top = stacks[handle] + MAX_TASK_STACK_SIZE - 1;
@@ -159,14 +160,15 @@ sched_err scheduling_run() {
   return SCHED_ERR_UNEXPECTED_RETURN;
 }
 
-sched_err scheduling_add_task(TASK task, uint32_t priority) {
+sched_err scheduling_add_task(TASK task, uint32_t priority, TASK_HANDLE* handle) {
+  NULL_GUARD(TASK_HANDLE, handle);
   if (priority >= PRIORITIES) {
     return SCHED_ERR_INVALID_PRIORITY;
   }
-  size_t handle = num_tasks++;
+  *handle = num_tasks++;
 
-  tasks[handle] = create_task(task, handle, priority, NORMAL_TASK);
-  if (!task_queue_enqueue(&priorities[priority], &tasks[handle])) {
+  tasks[*handle] = create_task(task, *handle, priority, NORMAL_TASK);
+  if (!task_queue_enqueue(&priorities[priority], &tasks[*handle])) {
     return SCHED_ERR_TOO_MANY_TASKS;
   }
   return SCHED_ERR_OK;
@@ -291,7 +293,7 @@ task_data get_current_task() {
   return ret;
 }
 
-sched_err wake_task(uint32_t handle) {
+sched_err wake_task(TASK_HANDLE handle) {
   if (handle >= MAX_TASKS) {
     return SCHED_ERR_INVALID_HANDLE;
   }
@@ -311,7 +313,7 @@ sched_err wake_task(uint32_t handle) {
   return SCHED_ERR_OK;
 }
 
-sched_err sleep_task(uint32_t handle) {
+sched_err sleep_task(TASK_HANDLE handle) {
   if (handle >= MAX_TASKS) {
     return SCHED_ERR_INVALID_HANDLE;
   }
