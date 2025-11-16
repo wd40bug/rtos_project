@@ -1,77 +1,62 @@
 #include "timing.h"
 #include "scheduling.h"
 
-#define QUEUE_TYPENAME index_queue
-#define QUEUE_TYPE size_t
-#define QUEUE_CAPACITY MAX_DELAYS
-#include "queue.h"
+typedef struct{
+  uint64_t time;
+  uint32_t handle;
+} timer;
+int timer_comparator(timer a, timer b) {
+  //NOTE: Done this way to avoid overflow
+  if (a.time > b.time) {
+    return 1;
+  }else if (a.time == b.time) {
+    return 0;
+  }else{
+    return -1;
+  }
+}
+#define SORTED_LIST_TYPENAME timer_list
+#define SORTED_LIST_TYPE timer
+#define SORTED_LIST_CAPACITY MAX_DELAYS
+#define SORTED_LIST_COMPARATOR timer_comparator
+#include "sortedlist.h"
 
 static uint64_t ticks = 0;
 
-typedef struct {
-  uint64_t time;
-  size_t next;
-  uint32_t handle;
-} timing_node;
-static timing_node timers[MAX_DELAYS];
-static size_t head = MAX_DELAYS;
-static uint32_t num_timers = 0;
-
-static index_queue free_queue;
+static timer_list timers;
 
 void timing_init() {
-  index_queue_init(&free_queue);
-  for (int i = 0; i < MAX_DELAYS; i++) {
-    index_queue_enqueue(&free_queue, i);
-  }
+  timer_list_init(&timers);
 }
 
 void timing_tick() {
   ticks++;
-  if (head < MAX_DELAYS && timers[head].time <= ticks) {
-    sched_err err = wake_task(timers[head].handle);
+  timer first;
+  if (timer_list_get_front(&timers, &first) && first.time < ticks){
+    sched_err err = wake_task(first.handle);
     if (err == SCHED_ERR_OK) {
-      index_queue_enqueue(&free_queue, head);
-      head = timers[head].next;
-      num_timers--;
+      timer_list_pop_front(&timers, NULL);
     }
   }
 }
 
 timer_err timing_delay_ms(uint32_t delay) {
   uint32_t current_task = get_current_task().task_handle;
-  if (num_timers >= MAX_DELAYS) {
+  if (timer_list_size(&timers) >= MAX_DELAYS) {
     return TIMER_TOO_MANY_TIMERS;
   }
-  size_t new_index;
-  if (!index_queue_dequeue(&free_queue, &new_index)) {
-    return TIMER_TOO_MANY_TIMERS;
-  }
-  timing_node new_node = {
-      .time = ticks + delay,
-      .handle = current_task,
-      .next = MAX_DELAYS,
+  timer task_timer = {
+    .handle = current_task,
+    .time = ticks + delay,
   };
   sched_err err = sleep_task(current_task);
   if (err != SCHED_ERR_OK) {
     return TIMER_SCHED_ERR;
   }
-  if (head >= MAX_DELAYS || timers[head].time > new_node.time) {
-    new_node.next = head;
-    head = new_index;
-  } else {
-    size_t node = head;
-    size_t next_node = timers[head].next;
-    while (next_node < MAX_DELAYS &&
-           timers[next_node].time < new_node.time) {
-      node = next_node;
-      next_node = timers[next_node].next;
-    }
-    timers[node].next = new_index;
-    new_node.next = next_node;
+  if (!timer_list_insert(&timers, task_timer)){
+    // TODO: Either ignore or hard fault
   }
-  num_timers++;
-  timers[new_index] = new_node;
+  
   return TIMER_OK;
 }
 

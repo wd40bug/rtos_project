@@ -42,6 +42,9 @@
 #define LL_POP_FRONT join2(LINKED_LIST_TYPENAME, pop_front)
 #define LL_TO_ARRAY join2(LINKED_LIST_TYPENAME, to_array)
 #define LL_APPEND_ARRAY join2(LINKED_LIST_TYPENAME, append_array)
+#define LL_GET join2(LINKED_LIST_TYPENAME, get)
+#define LL_GET_FRONT join2(LINKED_LIST_TYPENAME, get_front)
+#define LL_GET_BACK join2(LINKED_LIST_TYPENAME, get_back)
 
 #define LL_NONE LINKED_LIST_CAPACITY
 #define LL_NEXT(n) ll->nodes[n].next
@@ -232,6 +235,28 @@ size_t LL_APPEND_ARRAY(LINKED_LIST_TYPENAME* ll, size_t array_len, LINKED_LIST_T
     }
   }
   return array_len;
+}
+
+bool LL_GET (LINKED_LIST_TYPENAME* ll, size_t index, LINKED_LIST_TYPE* item) {
+  if (index >= LL_SIZE(ll)) {
+    return false;
+  }
+  size_t node = ll->head;
+  size_t current_index = 0;
+  while (current_index < index){
+    node = LL_NEXT(node);
+    current_index++;
+  }
+  *item = ll->nodes[node].val;
+  return true;
+}
+
+bool LL_GET_FRONT (LINKED_LIST_TYPENAME* ll, LINKED_LIST_TYPE* item) {
+  return LL_GET(ll, 0, item);
+}
+
+bool LL_GET_BACK (LINKED_LIST_TYPENAME* ll, LINKED_LIST_TYPE* item) {
+  return LL_GET(ll, LL_SIZE(ll) - 1, item);
 }
 
 #ifndef LINKED_LIST_DONT_UNDEF

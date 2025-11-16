@@ -14,6 +14,9 @@
 #undef LL_POP_FRONT
 #undef LL_TO_ARRAY
 #undef LL_APPEND_ARRAY
+#undef LL_GET
+#undef LL_GET_BACK
+#undef LL_GET_FRONT
 
 #undef LL_NEW_NODE
 #undef LL_DEL_NODE
