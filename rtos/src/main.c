@@ -18,7 +18,6 @@ task_err pong(task_data* task) {
 }
 
 static TASK_HANDLE long_calculation_handle;
-static TASK_HANDLE long_calculation_print_handle;
 
 task_err print_time_from_long_calculation(task_data* task) {
   MESSAGE_QUEUE_HANDLE print_queue;
@@ -29,7 +28,7 @@ task_err print_time_from_long_calculation(task_data* task) {
   }
   uint64_t initial_time;
   q_err = message_queue_read(print_queue, &initial_time, sizeof(initial_time));
-  if (q_err != MESSAGE_QUEUE_OK){
+  if (q_err != MESSAGE_QUEUE_OK) {
     return GEN_ERR;
   }
   printf("Starting calculation at %lu\n", (uint32_t)initial_time);
@@ -48,9 +47,18 @@ task_err print_time_from_long_calculation(task_data* task) {
 }
 
 task_err long_calculation(task_data* task) {
+  TASK_HANDLE print_task;
+  sched_err s_err = scheduling_add_task(
+      print_time_from_long_calculation,
+      task->priority,
+      &print_task
+  );
+  if (s_err != SCHED_ERR_OK){
+    return GEN_ERR;
+  }
   MESSAGE_QUEUE_HANDLE print_queue;
   message_q_error q_err =
-      message_queue_create(long_calculation_print_handle, &print_queue);
+      message_queue_create(print_task, &print_queue);
   if (q_err != MESSAGE_QUEUE_OK) {
     return GEN_ERR;
   }
@@ -58,7 +66,7 @@ task_err long_calculation(task_data* task) {
   uint32_t operations = 0;
   uint64_t time = ms_since_start();
   q_err = message_queue_write(print_queue, &time, sizeof(time));
-  if (q_err != MESSAGE_QUEUE_OK){
+  if (q_err != MESSAGE_QUEUE_OK) {
     return GEN_ERR;
   }
   while (1) {
@@ -81,11 +89,11 @@ int main(void) {
   scheduling_add_task(ping, 0, NULL);
   scheduling_add_task(pong, 0, NULL);
   scheduling_add_task(long_calculation, 1, &long_calculation_handle);
-  scheduling_add_task(
-      print_time_from_long_calculation,
-      1,
-      &long_calculation_print_handle
-  );
+  // scheduling_add_task(
+  //     print_time_from_long_calculation,
+  //     1,
+  //     &long_calculation_print_handle
+  // );
   printf("\nEverything Initialized!\n");
   rtos_run();
   while (1) {
