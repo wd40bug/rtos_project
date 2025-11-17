@@ -1,4 +1,5 @@
 #include "rtos.h"
+#include "messaging.h"
 #include "printf.h"
 #include "scheduling.h"
 #include "serial.h"
@@ -32,6 +33,7 @@ void rtos_init() {
   timing_init();
   init_serial(115200);
   scheduling_init();
+  messaging_init();
 }
 
 void rtos_run() {

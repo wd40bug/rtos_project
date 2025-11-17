@@ -1,7 +1,7 @@
 #include "svc.h"
+#include <inttypes.h>
 #include <printf.h>
 #include <stdbool.h>
-#include <inttypes.h>
 
 task_err ping(task_data* task) {
   while (1) {
@@ -17,16 +17,60 @@ task_err pong(task_data* task) {
   }
 }
 
+static TASK_HANDLE long_calculation_handle;
+static TASK_HANDLE long_calculation_print_handle;
+
+task_err print_time_from_long_calculation(task_data* task) {
+  MESSAGE_QUEUE_HANDLE print_queue;
+  message_q_error q_err =
+      message_queue_create(long_calculation_handle, &print_queue);
+  if (q_err != MESSAGE_QUEUE_OK) {
+    return GEN_ERR;
+  }
+  uint64_t initial_time;
+  q_err = message_queue_read(print_queue, &initial_time, sizeof(initial_time));
+  if (q_err != MESSAGE_QUEUE_OK){
+    return GEN_ERR;
+  }
+  printf("Starting calculation at %lu\n", (uint32_t)initial_time);
+  while (1) {
+    uint64_t time_to_print;
+    q_err =
+        message_queue_read(print_queue, &time_to_print, sizeof(time_to_print));
+    if (q_err != MESSAGE_QUEUE_OK) {
+      return GEN_ERR;
+    }
+    printf(
+        "Performed ten million additions\nTime is: %lu\n",
+        (uint32_t)time_to_print
+    );
+  }
+}
+
 task_err long_calculation(task_data* task) {
-  printf("Starting calculation\n");
+  MESSAGE_QUEUE_HANDLE print_queue;
+  message_q_error q_err =
+      message_queue_create(long_calculation_print_handle, &print_queue);
+  if (q_err != MESSAGE_QUEUE_OK) {
+    return GEN_ERR;
+  }
   volatile uint32_t accumulator = 0;
   uint32_t operations = 0;
+  uint64_t time = ms_since_start();
+  q_err = message_queue_write(print_queue, &time, sizeof(time));
+  if (q_err != MESSAGE_QUEUE_OK){
+    return GEN_ERR;
+  }
   while (1) {
     accumulator += operations;
     operations++;
 
     if (operations == 10000000) {
-      printf("Performed ten million additions\nTime is: %lu\n", (uint32_t)ms_since_start());
+      uint64_t time = ms_since_start();
+      q_err = message_queue_write(print_queue, &time, sizeof(time));
+      if (q_err != MESSAGE_QUEUE_OK) {
+        return GEN_ERR;
+      }
       operations = 0;
     }
   }
@@ -36,8 +80,13 @@ int main(void) {
   rtos_init();
   scheduling_add_task(ping, 0, NULL);
   scheduling_add_task(pong, 0, NULL);
-  scheduling_add_task(long_calculation, 1, NULL);
-  printf("Everything Initialized!\n");
+  scheduling_add_task(long_calculation, 1, &long_calculation_handle);
+  scheduling_add_task(
+      print_time_from_long_calculation,
+      1,
+      &long_calculation_print_handle
+  );
+  printf("\nEverything Initialized!\n");
   rtos_run();
   while (1) {
   }

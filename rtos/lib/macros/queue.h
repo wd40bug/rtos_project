@@ -31,7 +31,7 @@
 #error Queue Capacity must be greater than 0
 #endif
 
-#define __Q_ADD(A, B, cap) ((A + B) % cap)
+#define __Q_ADD(A, B) ((A + B) % QUEUE_CAPACITY)
 
 #define Q_INIT_FN join2(QUEUE_TYPENAME, init)
 #define Q_IS_FULL_FN join2(QUEUE_TYPENAME, is_full)
@@ -40,6 +40,9 @@
 #define Q_DEQUEUE_FN join2(QUEUE_TYPENAME, dequeue)
 #define Q_SIZE_FN join2(QUEUE_TYPENAME, size)
 #define Q_FREE_FN join2(QUEUE_TYPENAME, free)
+#define Q_CONTAINS_FN join2(QUEUE_TYPENAME, contains)
+#define Q_ENQUEUE_ALL_FN join2(QUEUE_TYPENAME, enqueue_all)
+#define Q_DEQUEUE_ALL_FN join2(QUEUE_TYPENAME, dequeue_all)
 
 typedef struct {
   QUEUE_TYPE data[QUEUE_CAPACITY];
@@ -65,7 +68,7 @@ bool Q_ENQUEUE_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE item) {
     return false;
   }
 
-  Q->data[__Q_ADD(Q->head, Q->size, QUEUE_CAPACITY)] = item;
+  Q->data[__Q_ADD(Q->head, Q->size)] = item;
   Q->size++;
   return true;
 }
@@ -76,7 +79,7 @@ bool Q_DEQUEUE_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE* item) {
     return false;
   }
   *item = Q->data[Q->head];
-  size_t new_head = __Q_ADD(Q->head, 1, QUEUE_CAPACITY);
+  size_t new_head = __Q_ADD(Q->head, 1);
   Q->size--;
   Q->head = new_head;
   return true;
@@ -88,6 +91,33 @@ size_t Q_SIZE_FN(QUEUE_TYPENAME* Q) {
 
 size_t Q_FREE_FN(QUEUE_TYPENAME* Q) {
   return QUEUE_CAPACITY - Q->size;
+}
+
+bool Q_CONTAINS_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE item){
+  for (int i = Q->head; i != __Q_ADD(Q->head, Q->size); i = __Q_ADD(i, 1)){
+    if (Q->data[i] == item){
+      return true;
+    }
+  }
+  return false;
+}
+
+size_t Q_ENQUEUE_ALL_FN (QUEUE_TYPENAME* Q, size_t buffer_size, QUEUE_TYPE* const buffer){
+  for (int i = 0; i < buffer_size; i++) {
+    if (!Q_ENQUEUE_FN(Q, buffer[i])){
+      return i;
+    }
+  }
+  return buffer_size;
+}
+
+size_t Q_DEQUEUE_ALL_FN (QUEUE_TYPENAME* Q, size_t buffer_size, QUEUE_TYPE* buffer){
+  for (int i = 0; i < buffer_size; i++){
+    if (!Q_DEQUEUE_FN(Q, &buffer[i])){
+      return i;
+    }
+  }
+  return buffer_size;
 }
 
 #ifndef QUEUE_DONT_UNDEF

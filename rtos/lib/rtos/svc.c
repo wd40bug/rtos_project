@@ -1,4 +1,5 @@
 #include "svc.h"
+#include "messaging.h"
 #include "stm32l476xx.h"
 #include "timing.h"
 
@@ -17,6 +18,18 @@ timer_err delay_ms(uint32_t ms) {
                    "mov %[ret], r0\n\t"
                    : [ret] "=r"(ret)
                    : [ms] "r"(ms));
+  return ret;
+}
+
+message_q_error message_queue_create(
+    TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle
+) {
+  register message_q_error ret asm("r0");
+  register TASK_HANDLE handle_r asm("r0") = handle;
+  register MESSAGE_QUEUE_HANDLE* q_handle_r asm("r1") = q_handle;
+  __asm__ volatile("svc #3\n\t"
+                   : [ret] "=r"(ret)
+                   : [handle] "r"(handle_r), [q_handle] "r"(q_handle_r));
   return ret;
 }
 
@@ -47,7 +60,16 @@ void SVC_Handler(void) {
   case 2:
     svc_args->r0 = timing_delay_ms(svc_args->r0);
     break;
+  case 3: /* message_queue_create */
+    svc_args->r0 = messaging_queue_create(
+        svc_args->r0,
+        (MESSAGE_QUEUE_HANDLE*)svc_args->r1
+    );
+    break;
   default: /* unknown SVC */
+    // TODO: Fault
+    while (1) {
+    }
     break;
   }
 }

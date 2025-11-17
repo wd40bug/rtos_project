@@ -1,6 +1,7 @@
 #ifndef RTOS_H
 #define RTOS_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -39,7 +40,7 @@ typedef struct __attribute__ ((packed)) {
 } FullStackFrame;
 
 typedef uint32_t TASK_HANDLE;
-typedef uint32_t MESSAGE_QUEUE_HANDLE;
+typedef size_t MESSAGE_QUEUE_HANDLE;
 
 //--------RTOS----------------
 void rtos_init();
@@ -97,9 +98,15 @@ extern void wait_uart();
 typedef enum {
   MESSAGE_QUEUE_OK,
   MESSAGE_QUEUE_TOO_MANY_QUEUES,
-  MESSAGE_QUEUE_EXISTS,
-} message_queue_error;
-extern uint32_t create_message_queue(TASK_HANDLE handle);
+  MESSAGE_QUEUE_INVALID_HANDLE,
+  MESSAGE_QUEUE_CLOSED,
+  MESSAGE_QUEUE_DEADLOCK,
+  MESSAGE_QUEUE_INVALID_TASK
+} message_q_error;
+extern message_q_error message_queue_create(TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle); //Syscall
+extern message_q_error message_queue_write(MESSAGE_QUEUE_HANDLE q_handle, void* const data, size_t size);
+extern message_q_error message_queue_read(MESSAGE_QUEUE_HANDLE q_handle, void* data, size_t size);
+extern message_q_error message_queue_data_available(MESSAGE_QUEUE_HANDLE q_handle, size_t* data);
 
 //--------SYSCALLS------------
 extern void gain_priviledge();

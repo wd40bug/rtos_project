@@ -6,6 +6,7 @@
 #undef Q_DEQUEUE_FN
 #undef Q_SIZE_FN
 #undef Q_FREE_FN
+#undef Q_CONTAINS_FN
 #undef QUEUE_CAPACITY
 #undef QUEUE_TYPE
 #undef QUEUE_TYPENAME

@@ -15,6 +15,7 @@ sched_err scheduling_run();
 sched_err yield();
 sched_err sleep_task(TASK_HANDLE handle);
 sched_err wake_task(TASK_HANDLE handle);
+bool valid_handle(TASK_HANDLE handle);
 
 void scheduling_tick();
 

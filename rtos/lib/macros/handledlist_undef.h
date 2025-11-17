@@ -1,0 +1,18 @@
+#undef HL_INIT 
+#undef HL_SIZE 
+#undef HL_CAPACITY 
+#undef HL_IS_FULL
+#undef HL_INSERT 
+#undef HL_GET 
+#undef HL_GET_REF
+#undef HL_SET 
+#undef HL_FIND 
+#undef HL_IS_VALID 
+#undef HL_TO_ARRAY 
+#undef HL_ADD_ARRAY 
+
+#undef HANDLED_LIST_HANDLE_NAME
+#undef HANDLED_LIST_TYPENAME
+#undef HANDLED_LIST_TYPE
+#undef HANDLED_LIST_CAPACITY
+#undef HANDLED_LIST_DONT_UNDEF

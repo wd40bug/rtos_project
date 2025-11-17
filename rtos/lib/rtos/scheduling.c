@@ -1,4 +1,5 @@
 #include "scheduling.h"
+#include "messaging.h"
 #include "printf.h"
 #include "timing.h"
 #include "util.h"
@@ -9,7 +10,9 @@
 // NOTE: No tasks can ever be removed for now XD
 
 const uint32_t MAX_INTERRUPT_PRIORITY = UINT32_MAX;
-#define MAX_TASK_STACK_SIZE 512 // 2kb
+#define MAX_TASK_STACK_SIZE 1024 // 4kb
+
+uint32_t canaries[2] = {0xAAAAAAAA, 0x55555555};
 
 typedef enum { TASK_READY, TASK_SLEEPING, TASK_DONE } task_status;
 typedef enum { NORMAL_TASK, IDLE_TASK, RESTORE_TASK } task_specialness;
@@ -32,15 +35,13 @@ int32_t num_done = 0;
 
 static bool is_running = false;
 // To potentially restore the calling function when all tasks end
-volatile uint32_t restore_stack[MAX_TASK_STACK_SIZE];
+volatile uint32_t restore_stack[MAX_TASK_STACK_SIZE] __attribute((aligned(8)));
 volatile task_data_internal restore_task = {
     .stack_top = restore_stack + MAX_TASK_STACK_SIZE - 1, // Filled in on switch
     .status = TASK_READY,
     .specialness = RESTORE_TASK,
-    .task_data = (task_data){
-                             .task_handle = MAX_TASKS, // Invalid value
-                             .priority = PRIORITIES
-    },
+    .task_data = (task_data){.task_handle = MAX_TASKS, // Invalid value
+                             .priority = PRIORITIES},
     .ticks_started = UINT64_MAX
 };
 
@@ -55,6 +56,7 @@ task_err idle(task_data* td) {
 void scheduling_return() {
   __disable_irq();
   // TODO: this
+  messaging_close_queues(get_current_task().task_handle);
   __enable_irq();
 }
 
@@ -75,11 +77,19 @@ void generate_pend_sv() {
   SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
+bool check_canaries(TASK_HANDLE handle) {
+  uint32_t* canary_start = &stacks[handle][MAX_TASK_STACK_SIZE - 1] -
+                           sizeof(canaries) / sizeof(uint32_t);
+  return memcmp(canaries, canary_start, sizeof(canaries)) == 0;
+}
+
 static task_data_internal create_task(
     TASK task, TASK_HANDLE handle, uint32_t priority, uint8_t specialness
 ) {
   // Stacks are top down
-  uint32_t* stack_top = stacks[handle] + MAX_TASK_STACK_SIZE - 1;
+  uint32_t* stack_top = &stacks[handle][MAX_TASK_STACK_SIZE - 1];
+  stack_top -= sizeof(canaries) / sizeof(uint32_t);
+  memcpy(stack_top, &canaries, sizeof(canaries));
   xPSR_Type xPSR = {
       .b = {
             .ISR = 0,
@@ -160,7 +170,9 @@ sched_err scheduling_run() {
   return SCHED_ERR_UNEXPECTED_RETURN;
 }
 
-sched_err scheduling_add_task(TASK task, uint32_t priority, TASK_HANDLE* handle) {
+sched_err scheduling_add_task(
+    TASK task, uint32_t priority, TASK_HANDLE* handle
+) {
   NULL_GUARD(TASK_HANDLE, handle);
   if (priority >= PRIORITIES) {
     return SCHED_ERR_INVALID_PRIORITY;
@@ -193,6 +205,11 @@ void next_task(void) {
       next_task = (task_data_internal*)&restore_task;
     } else {
       next_task = (task_data_internal*)&idle_task;
+    }
+  } 
+  if (!check_canaries(next_task->task_data.task_handle)){
+    //TODO: ERROR, STACK OVERFLOW!
+    while (1) {
     }
   }
   current_task = next_task;
@@ -287,6 +304,7 @@ sched_err yield() {
 }
 
 task_data get_current_task() {
+  // TODO: I'm unconvinced this is required
   __disable_irq();
   task_data ret = current_task->task_data;
   __enable_irq();
@@ -294,7 +312,7 @@ task_data get_current_task() {
 }
 
 sched_err wake_task(TASK_HANDLE handle) {
-  if (handle >= MAX_TASKS) {
+  if (!valid_handle(handle)) {
     return SCHED_ERR_INVALID_HANDLE;
   }
   task_data_internal* task = &tasks[handle];
@@ -314,7 +332,7 @@ sched_err wake_task(TASK_HANDLE handle) {
 }
 
 sched_err sleep_task(TASK_HANDLE handle) {
-  if (handle >= MAX_TASKS) {
+  if (!valid_handle(handle)) {
     return SCHED_ERR_INVALID_HANDLE;
   }
   task_data_internal* task = &tasks[handle];
@@ -326,4 +344,8 @@ sched_err sleep_task(TASK_HANDLE handle) {
     generate_pend_sv();
   }
   return SCHED_ERR_OK;
+}
+
+bool valid_handle(TASK_HANDLE handle) {
+  return handle < num_tasks;
 }

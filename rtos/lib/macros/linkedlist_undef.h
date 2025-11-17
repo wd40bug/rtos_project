@@ -17,6 +17,12 @@
 #undef LL_GET
 #undef LL_GET_BACK
 #undef LL_GET_FRONT
+#undef LL_FIND
+
+#undef LL_FIND_DATA_INDEX
+#undef LL_GET_DATA_INDEX
+#undef LL_SET_DATA_INDEX
+#undef LL_DELETE_DATA_INDEX
 
 #undef LL_NEW_NODE
 #undef LL_DEL_NODE
