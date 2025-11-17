@@ -1,0 +1,3 @@
+[submodule "rtos/lib/printf"]
+	path = rtos/lib/printf
+	url = https://github.com/mpaland/printf
