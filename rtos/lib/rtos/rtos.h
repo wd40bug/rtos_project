@@ -5,45 +5,18 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// TODO:
-// Timing stuff
-// GPIO
-// UART
-// SCHEDULING
-// Permissions
-// Stack limit
-// LED
-
 //-------DEFINITIONS----------
-typedef struct __attribute__((packed)) {
-  uint32_t r0;
-  uint32_t r1;
-  uint32_t r2;
-  uint32_t r3;
-  uint32_t r12;
-  uint32_t lr;
-  uint32_t* return_address;
-  uint32_t xpsr;
-} ShortStackFrame;
-
-typedef struct __attribute__ ((packed)) {
-  uint32_t r4;
-  uint32_t r5;
-  uint32_t r6;
-  uint32_t r7;
-  uint32_t r8;
-  uint32_t r9;
-  uint32_t r10;
-  uint32_t r11;
-  uint32_t exc_return;
-  ShortStackFrame short_frame;
-} FullStackFrame;
-
 typedef uint32_t TASK_HANDLE;
 typedef size_t MESSAGE_QUEUE_HANDLE;
 
 //--------RTOS----------------
+/**
+ * @brief Initialize the RTOS, should be done first thing
+ */
 void rtos_init();
+/**
+ * @brief Run the RTOS, begins task switching. Should be called after adding some tasks
+ */
 void rtos_run();
 
 //--------SCHEDULING----------
@@ -70,7 +43,22 @@ typedef enum {
   SCHED_ERR_INVALID_HANDLE,
 } sched_err;
 
-extern sched_err scheduling_add_task(TASK task, uint32_t priority, TASK_HANDLE* handle);
+/**
+ * @brief Add a task to the scheduler
+ *
+ * @param task
+ * @param priority 0 is the highest priority PRIORITIES - 1 is the lowest
+ * @paramout handle
+ * @return
+ */
+extern sched_err scheduling_add_task(
+    TASK task, uint32_t priority, TASK_HANDLE* handle
+);
+/**
+ * @brief Yield the current task without sleeping
+ *
+ * @return
+ */
 extern sched_err yield();
 #define PRIORITIES 2
 
@@ -81,18 +69,19 @@ typedef enum {
   TIMER_TOO_MANY_TIMERS,
   TIMER_SCHED_ERR,
 } timer_err;
-extern timer_err delay_ms(uint32_t ms); // Syscall
+/**
+ * @brief Sleep the current task until delay ms has passed
+ *
+ * @param delay
+ * @return
+ */
+extern timer_err delay_ms(uint32_t delay); // Syscall
+/**
+ * @brief The number of milliseconds since rtos_init
+ *
+ * @return 
+ */
 extern uint64_t ms_since_start();
-
-//--------LED-----------------
-extern void led_on();
-extern void led_off();
-
-//--------GPIO----------------
-extern void wait_gpio_event(); // Syscall
-
-//--------UART----------------
-extern void wait_uart();
 
 //-------MESSAGE-QUEUES-------
 typedef enum {
@@ -103,13 +92,47 @@ typedef enum {
   MESSAGE_QUEUE_DEADLOCK,
   MESSAGE_QUEUE_INVALID_TASK
 } message_q_error;
-extern message_q_error message_queue_create(TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle); //Syscall
-extern message_q_error message_queue_write(MESSAGE_QUEUE_HANDLE q_handle, void* const data, size_t size);
-extern message_q_error message_queue_read(MESSAGE_QUEUE_HANDLE q_handle, void* data, size_t size);
-extern message_q_error message_queue_data_available(MESSAGE_QUEUE_HANDLE q_handle, size_t* data);
-
-//--------SYSCALLS------------
-extern void gain_priviledge();
-extern void relinquish_priviledge();
+/**
+ * @brief Create a message queue between the current task and another task
+ *
+ * @param handle 
+ * @param q_handle 
+ * @return 
+ */
+extern message_q_error message_queue_create(
+    TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle
+); // Syscall
+/**
+ * @brief Write to the message queue (sleep if can't write enough data)
+ *
+ * @param q_handle 
+ * @paramout data 
+ * @param size 
+ * @return 
+ */
+extern message_q_error message_queue_write(
+    MESSAGE_QUEUE_HANDLE q_handle, void* const data, size_t size
+);
+/**
+ * @brief Read from the message queue (sleep if can't read enough data)
+ *
+ * @param q_handle 
+ * @param data 
+ * @param size 
+ * @return 
+ */
+extern message_q_error message_queue_read(
+    MESSAGE_QUEUE_HANDLE q_handle, void* data, size_t size
+);
+/**
+ * @brief Number of bytes available to read from the queue
+ *
+ * @param q_handle 
+ * @paramout data 
+ * @return 
+ */
+extern message_q_error message_queue_data_available(
+    MESSAGE_QUEUE_HANDLE q_handle, size_t* data
+);
 
 #endif

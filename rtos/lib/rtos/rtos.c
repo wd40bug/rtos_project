@@ -4,6 +4,7 @@
 #include "scheduling.h"
 #include "serial.h"
 #include "timing.h"
+#include "frames.h"
 #include <stm32l476xx.h>
 
 static void priorities() {

@@ -3,6 +3,7 @@
 #include "printf.h"
 #include "timing.h"
 #include "util.h"
+#include "frames.h"
 #include <stddef.h>
 #include <stm32l476xx.h>
 #include <string.h>
