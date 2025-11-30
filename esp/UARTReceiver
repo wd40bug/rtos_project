@@ -1,0 +1,100 @@
+// Heltec LoRa 32 V3: UART MEAS receiver
+// GPIO1 = RX, GPIO2 = TX for Serial1
+
+static const int HELTEC_RX_PIN = 1;
+static const int HELTEC_TX_PIN = 2;
+
+String uartBuffer = "";
+
+// Latest values 
+long lastSeq = 0;
+float dev1Voltage = 0.0f;
+float dev1Current = 0.0f;
+float dev2Voltage = 0.0f;
+float dev2Current = 0.0f;
+
+void setup() {
+  Serial.begin(115200);  // USB debug
+  delay(500);
+  Serial.println("Heltec MEAS receiver online");
+
+  Serial1.begin(9600, SERIAL_8N1, HELTEC_RX_PIN, HELTEC_TX_PIN);
+  Serial.println("Serial1 started at 9600 baud");
+}
+
+void loop() {
+  // Read bytes from UART and build lines
+  while (Serial1.available()) {
+    char c = Serial1.read();
+    if (c == '\n') {
+      String line = uartBuffer;
+      uartBuffer = "";
+      line.trim();
+
+      if (line.length() > 0) {
+        Serial.print("Raw line: [");
+        Serial.print(line);
+        Serial.println("]");
+        handlePacket(line);
+      }
+    } else if (c != '\r') {
+      uartBuffer += c;
+    }
+  }
+
+  // For demo: print every 2 seconds
+  static unsigned long lastPrint = 0;
+  if (millis() - lastPrint > 2000) {
+    lastPrint = millis();
+    Serial.print("Seq "); Serial.print(lastSeq);
+    Serial.print(" | Dev1: ");
+    Serial.print(dev1Voltage, 3); Serial.print(" V, ");
+    Serial.print(dev1Current, 1); Serial.print(" mA | Dev2: ");
+    Serial.print(dev2Voltage, 3); Serial.print(" V, ");
+    Serial.print(dev2Current, 1); Serial.println(" mA");
+  }
+}
+
+void handlePacket(const String &line) {
+  // Expect "MEAS,seq,v1_mV,i1_mA,v2_mV,i2_mA"
+  // Split by commas
+  int p0 = line.indexOf(',');
+  if (p0 < 0) return;
+  String type = line.substring(0, p0);
+
+  if (type != "MEAS") {
+    Serial.print("Unknown packet type: ");
+    Serial.println(type);
+    return;
+  }
+
+  int p1 = line.indexOf(',', p0 + 1);
+  int p2 = line.indexOf(',', p1 + 1);
+  int p3 = line.indexOf(',', p2 + 1);
+  int p4 = line.indexOf(',', p3 + 1);
+
+  if (p1 < 0 || p2 < 0 || p3 < 0 || p4 < 0) {
+    Serial.println("Malformed MEAS packet");
+    return;
+  }
+
+  String seqStr   = line.substring(p0 + 1, p1);
+  String v1Str    = line.substring(p1 + 1, p2);
+  String i1Str    = line.substring(p2 + 1, p3);
+  String v2Str    = line.substring(p3 + 1, p4);
+  String i2Str    = line.substring(p4 + 1);
+
+  long seq    = seqStr.toInt();
+  long v1_mV  = v1Str.toInt();
+  long i1_mA  = i1Str.toInt();
+  long v2_mV  = v2Str.toInt();
+  long i2_mA  = i2Str.toInt();
+
+  lastSeq      = seq;
+  dev1Voltage  = v1_mV / 1000.0f;
+  dev1Current  = i1_mA;        // already in mA
+  dev2Voltage  = v2_mV / 1000.0f;
+  dev2Current  = i2_mA;        // mA
+
+  Serial.println("Parsed MEAS packet OK");
+}
