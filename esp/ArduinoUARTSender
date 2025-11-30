@@ -1,0 +1,52 @@
+#include <SoftwareSerial.h>
+
+// D2 = RX from Heltec TX (GPIO2)
+// D3 = TX to Heltec RX (GPIO1 via divider)
+SoftwareSerial heltecSerial(2, 3);
+
+unsigned long lastSend = 0;
+const unsigned long sendInterval = 1000; // ms
+
+long seq = 0;
+
+void setup() {
+  Serial.begin(9600);         // PC debug
+  heltecSerial.begin(9600);   // Link to Heltec
+  heltecSerial.listen();
+
+  Serial.println("Arduino MEAS sender online");
+}
+
+void loop() {
+  unsigned long now = millis();
+  if (now - lastSend >= sendInterval) {
+    lastSend = now;
+    seq++;
+
+    // Dummy values for now (replace with real ADC readings later)
+    long v1_mV = 5000 + (seq % 1000);  // 5.0–5.999 V
+    long i1_mA = 100 + (seq % 50);     // 100–149 mA
+    long v2_mV = 12000;                // 12.000 V fixed
+    long i2_mA = 250;                  // 250 mA fixed
+
+    // Build and send packet: MEAS,seq,v1,i1,v2,i2\n
+    heltecSerial.print("MEAS,");
+    heltecSerial.print(seq);
+    heltecSerial.print(',');
+    heltecSerial.print(v1_mV);
+    heltecSerial.print(',');
+    heltecSerial.print(i1_mA);
+    heltecSerial.print(',');
+    heltecSerial.print(v2_mV);
+    heltecSerial.print(',');
+    heltecSerial.print(i2_mA);
+    heltecSerial.print('\n');
+
+    Serial.print(">> Sent: MEAS,");
+    Serial.print(seq); Serial.print(',');
+    Serial.print(v1_mV); Serial.print(',');
+    Serial.print(i1_mA); Serial.print(',');
+    Serial.print(v2_mV); Serial.print(',');
+    Serial.println(i2_mA);
+  }
+}
