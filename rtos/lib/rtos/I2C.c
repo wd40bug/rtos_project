@@ -1,4 +1,4 @@
-#include "ina219.h"
+#include "I2C.h"
 
 // Simple loop-based timeout (no HAL, no RTOS assumed)
 #ifndef INA219_I2C_TIMEOUT_LOOPS
