@@ -5,15 +5,13 @@
 extern "C" {
 #endif
 
-#include "stm32l4xx_hal.h"   // Change to your MCU family if different
 #include <stdint.h>
+#include <stdbool.h>
+#include "stm32l476xx.h"   // CMSIS device header for STM32L476
 
 // ===========================================
 // INA219 I2C ADDRESSES (7-bit)
 // ===========================================
-// Example usage:
-//   dev.address = INA219_ADDR_40;
-//   dev.address = INA219_ADDR_41;
 #define INA219_ADDR_40   0x40U
 #define INA219_ADDR_41   0x41U
 
@@ -28,20 +26,31 @@ extern "C" {
 #define INA219_REG_CALIB     0x05U
 
 // ===========================================
-// DEFAULT CONFIG / CALIB (matches your sketch)
+// DEFAULT CONFIG / CALIB (matches Arduino sketch)
 // ===========================================
 #define INA219_DEFAULT_CONFIG   0x399FU
 #define INA219_DEFAULT_CALIB    13400U
 
 // ===========================================
-// DEVICE STRUCT
+// STATUS ENUM
+// ===========================================
+typedef enum {
+    INA219_OK = 0,
+    INA219_ERROR_PARAM,
+    INA219_ERROR_TIMEOUT,
+    INA219_ERROR_NACK,
+    INA219_ERROR_BUS
+} INA219_Status;
+
+// ===========================================
+// DEVICE HANDLE
 // ===========================================
 typedef struct {
-    I2C_HandleTypeDef *hi2c;   // Pointer to I2C handle
-    uint8_t address;           // 7-bit I2C address (e.g., 0x40, 0x41)
+    I2C_TypeDef *I2C;       // Pointer to I2C peripheral (e.g., I2C1, I2C2)
+    uint8_t      address;   // 7-bit I2C address (0x40, 0x41, etc.)
 
-    float current_lsb;         // A/bit
-    float power_lsb;           // W/bit
+    float current_lsb;      // A/bit
+    float power_lsb;        // W/bit
 } INA219_Device;
 
 // ===========================================
@@ -50,86 +59,54 @@ typedef struct {
 
 /**
  * @brief Initialize INA219 with default config/calibration (continuous mode).
- *        Uses the same config and calibration values as your Arduino code.
+ *        The I2C peripheral must already be configured and enabled.
  *
  * @param dev        Pointer to INA219_Device instance
- * @param hi2c       Pointer to initialized I2C handle (HAL)
+ * @param I2Cx       Pointer to I2C instance (I2C1, I2C2, ...)
  * @param address7   7-bit I2C address (e.g., 0x40 or 0x41)
  *
- * @return HAL_OK on success, error status otherwise.
+ * @return INA219_OK on success, error code otherwise.
  */
-HAL_StatusTypeDef INA219_Init(INA219_Device *dev,
-                              I2C_HandleTypeDef *hi2c,
-                              uint8_t address7);
+INA219_Status INA219_Init(INA219_Device *dev,
+                          I2C_TypeDef *I2Cx,
+                          uint8_t address7);
 
 /**
  * @brief Read shunt voltage in millivolts.
- *
- * @param dev       Pointer to INA219_Device
- * @param mV_out    Pointer to float to store the result in mV
- *
- * @return HAL_OK on success, error status otherwise.
  */
-HAL_StatusTypeDef INA219_ReadShuntVoltage_mV(INA219_Device *dev, float *mV_out);
+INA219_Status INA219_ReadShuntVoltage_mV(INA219_Device *dev, float *mV_out);
 
 /**
  * @brief Read bus voltage in volts.
- *
- * @param dev       Pointer to INA219_Device
- * @param V_out     Pointer to float to store the result in V
- *
- * @return HAL_OK on success, error status otherwise.
  */
-HAL_StatusTypeDef INA219_ReadBusVoltage_V(INA219_Device *dev, float *V_out);
+INA219_Status INA219_ReadBusVoltage_V(INA219_Device *dev, float *V_out);
 
 /**
  * @brief Read current in milliamps.
- *
- * @param dev       Pointer to INA219_Device
- * @param mA_out    Pointer to float to store the result in mA
- *
- * @return HAL_OK on success, error status otherwise.
  */
-HAL_StatusTypeDef INA219_ReadCurrent_mA(INA219_Device *dev, float *mA_out);
+INA219_Status INA219_ReadCurrent_mA(INA219_Device *dev, float *mA_out);
 
 /**
  * @brief Read power in watts.
- *
- * @param dev       Pointer to INA219_Device
- * @param W_out     Pointer to float to store the result in W
- *
- * @return HAL_OK on success, error status otherwise.
  */
-HAL_StatusTypeDef INA219_ReadPower_W(INA219_Device *dev, float *W_out);
+INA219_Status INA219_ReadPower_W(INA219_Device *dev, float *W_out);
 
 /**
  * @brief Low-level: write 16-bit register.
- *
- * @param dev       Pointer to INA219_Device
- * @param reg       Register address
- * @param value     16-bit value to write
- *
- * @return HAL_OK on success, error status otherwise.
  */
-HAL_StatusTypeDef INA219_WriteRegister(INA219_Device *dev,
-                                       uint8_t reg,
-                                       uint16_t value);
+INA219_Status INA219_WriteRegister(INA219_Device *dev,
+                                   uint8_t reg,
+                                   uint16_t value);
 
 /**
  * @brief Low-level: read 16-bit register.
- *
- * @param dev       Pointer to INA219_Device
- * @param reg       Register address
- * @param value_out Pointer to 16-bit variable to store the value
- *
- * @return HAL_OK on success, error status otherwise.
  */
-HAL_StatusTypeDef INA219_ReadRegister(INA219_Device *dev,
-                                      uint8_t reg,
-                                      uint16_t *value_out);
+INA219_Status INA219_ReadRegister(INA219_Device *dev,
+                                  uint8_t reg,
+                                  uint16_t *value_out);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // INA219_H
+#endif
