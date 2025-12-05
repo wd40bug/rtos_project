@@ -18,7 +18,7 @@ task_err pong(task_data* task) {
 }
 
 typedef enum {
-  CONFIGURATION =0,
+  CONFIGURATION = 0,
   SHUNT_VOLTAGE = 1,
   BUS_VOLTAGE = 2,
   POWER = 3,
