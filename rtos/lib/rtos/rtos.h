@@ -1,6 +1,7 @@
 #ifndef RTOS_H
 #define RTOS_H
 
+#include "stm32l476xx.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -79,7 +80,7 @@ extern timer_err delay_ms(uint32_t delay); // Syscall
 /**
  * @brief The number of milliseconds since rtos_init
  *
- * @return 
+ * @return
  */
 extern uint64_t ms_since_start();
 
@@ -95,9 +96,9 @@ typedef enum {
 /**
  * @brief Create a message queue between the current task and another task
  *
- * @param handle 
- * @param q_handle 
- * @return 
+ * @param handle
+ * @param q_handle
+ * @return
  */
 extern message_q_error message_queue_create(
     TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle
@@ -105,10 +106,10 @@ extern message_q_error message_queue_create(
 /**
  * @brief Write to the message queue (sleep if can't write enough data)
  *
- * @param q_handle 
- * @paramout data 
- * @param size 
- * @return 
+ * @param q_handle
+ * @paramout data
+ * @param size
+ * @return
  */
 extern message_q_error message_queue_write(
     MESSAGE_QUEUE_HANDLE q_handle, void* const data, size_t size
@@ -116,10 +117,10 @@ extern message_q_error message_queue_write(
 /**
  * @brief Read from the message queue (sleep if can't read enough data)
  *
- * @param q_handle 
- * @param data 
- * @param size 
- * @return 
+ * @param q_handle
+ * @param data
+ * @param size
+ * @return
  */
 extern message_q_error message_queue_read(
     MESSAGE_QUEUE_HANDLE q_handle, void* data, size_t size
@@ -127,12 +128,26 @@ extern message_q_error message_queue_read(
 /**
  * @brief Number of bytes available to read from the queue
  *
- * @param q_handle 
- * @paramout data 
- * @return 
+ * @param q_handle
+ * @paramout data
+ * @return
  */
 extern message_q_error message_queue_data_available(
     MESSAGE_QUEUE_HANDLE q_handle, size_t* data
 );
+
+//-------I2C------------------
+typedef enum {
+  I2C_OK,
+  I2C_QUEUE_FULL,
+  INVALID_I2C,
+  CONCURRENT_RECV,
+} I2C_Error;
+
+extern I2C_Error i2c_write(
+    I2C_TypeDef* i2c, uint8_t slave_addr, uint8_t* data, uint8_t data_len
+);
+
+extern I2C_Error i2c_read(I2C_TypeDef* i2c, uint8_t slave_addr, uint8_t* data, uint8_t data_len);
 
 #endif

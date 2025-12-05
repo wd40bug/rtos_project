@@ -174,7 +174,7 @@ message_q_error message_queue_data_available(
 }
 
 message_q_error messaging_close_queues(TASK_HANDLE task) {
-  if (!valid_handle(task)) {
+  if (!is_valid_task_handle(task)) {
     return MESSAGE_QUEUE_INVALID_TASK;
   }
   MESSAGE_QUEUE_HANDLE q_handle;

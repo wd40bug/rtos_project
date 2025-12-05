@@ -313,7 +313,7 @@ task_data get_current_task() {
 }
 
 sched_err wake_task(TASK_HANDLE handle) {
-  if (!valid_handle(handle)) {
+  if (!is_valid_task_handle(handle)) {
     return SCHED_ERR_INVALID_HANDLE;
   }
   task_data_internal* task = &tasks[handle];
@@ -333,7 +333,7 @@ sched_err wake_task(TASK_HANDLE handle) {
 }
 
 sched_err sleep_task(TASK_HANDLE handle) {
-  if (!valid_handle(handle)) {
+  if (!is_valid_task_handle(handle)) {
     return SCHED_ERR_INVALID_HANDLE;
   }
   task_data_internal* task = &tasks[handle];
@@ -347,6 +347,6 @@ sched_err sleep_task(TASK_HANDLE handle) {
   return SCHED_ERR_OK;
 }
 
-bool valid_handle(TASK_HANDLE handle) {
+bool is_valid_task_handle(TASK_HANDLE handle) {
   return handle < num_tasks;
 }

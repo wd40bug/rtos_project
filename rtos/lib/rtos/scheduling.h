@@ -7,7 +7,7 @@
 
 #include "rtos.h"
 
-#define MAX_TASKS 4
+#define MAX_TASKS 6
 
 /**
  * @brief Initialize the scheduler
@@ -45,7 +45,7 @@ sched_err wake_task(TASK_HANDLE handle);
  * @param handle 
  * @return 
  */
-bool valid_handle(TASK_HANDLE handle);
+bool is_valid_task_handle(TASK_HANDLE handle);
 
 /**
  * @brief Perform actions every system tick. ONLY TO BE CALLED FROM SysTick_Handler 
