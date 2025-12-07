@@ -1,5 +1,28 @@
 #include "i2c.h"
 
+// If the device header doesn't define these (or intellisense can't see it),
+// provide correct STM32L4 I2C_CR2 bit positions and masks.
+
+#ifndef I2C_CR2_SADD_Pos
+#define I2C_CR2_SADD_Pos      0U
+#define I2C_CR2_SADD_Msk      (0x3FFU << I2C_CR2_SADD_Pos)
+#endif
+
+#ifndef I2C_CR2_NBYTES_Pos
+#define I2C_CR2_NBYTES_Pos    16U
+#define I2C_CR2_NBYTES_Msk    (0xFFU << I2C_CR2_NBYTES_Pos)
+#endif
+
+#ifndef I2C_CR2_RELOAD_Pos
+#define I2C_CR2_RELOAD_Pos    24U
+#define I2C_CR2_RELOAD        (1U << I2C_CR2_RELOAD_Pos)
+#endif
+
+#ifndef I2C_CR2_AUTOEND_Pos
+#define I2C_CR2_AUTOEND_Pos   25U
+#define I2C_CR2_AUTOEND       (1U << I2C_CR2_AUTOEND_Pos)
+#endif
+
 // =====================
 // Configuration macros
 // =====================
