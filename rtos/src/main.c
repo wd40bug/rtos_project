@@ -82,6 +82,8 @@ task_err read1(task_data* task) {
   write_i2c_message(I2C1, CALIBRATION, I2C_CALIB);
   printf("Sent calibration\n");
   uint16_t voltage = 0xFFFF;
+  write_i2c_message(I2C1, BUS_VOLTAGE, 0x0000);
+  printf("Wrote zero to bus voltage\n");
   read_i2c_message(I2C1, &voltage);
   printf("READ FROM i2c: %u\n", voltage);
   while (1) {

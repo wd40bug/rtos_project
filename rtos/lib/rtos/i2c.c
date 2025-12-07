@@ -199,7 +199,7 @@ I2C_Error i2c_read(I2C_TypeDef* i2c,
     i2c_clear_errors_and_stop(i2c);
 
     uint32_t cr2 = 0;
-    cr2 |= ((uint32_t)slave_addr << I2C_CR2_SADD_Pos);
+    cr2 |= (((uint32_t)slave_addr << 1) << I2C_CR2_SADD_Pos);;
     cr2 |= ((uint32_t)data_len  << I2C_CR2_NBYTES_Pos);
     cr2 |= I2C_CR2_START;
     cr2 |= I2C_CR2_AUTOEND;
