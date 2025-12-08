@@ -12,6 +12,7 @@ void relinquish_priviledge() {
   __asm__ volatile("svc #1\n\t");
 }
 
+
 timer_err delay_ms(uint32_t ms) {
   timer_err ret;
   __asm__ volatile("mov r0, %[ms]\n\t"
@@ -21,6 +22,7 @@ timer_err delay_ms(uint32_t ms) {
                    : [ms] "r"(ms));
   return ret;
 }
+
 
 message_q_error message_queue_create(
     TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle

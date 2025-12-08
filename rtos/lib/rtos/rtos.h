@@ -136,18 +136,7 @@ extern message_q_error message_queue_data_available(
     MESSAGE_QUEUE_HANDLE q_handle, size_t* data
 );
 
-//-------I2C------------------
-typedef enum {
-  I2C_OK,
-  I2C_QUEUE_FULL,
-  INVALID_I2C,
-  CONCURRENT_RECV,
-} I2C_Error;
-
-extern I2C_Error i2c_write(
-    I2C_TypeDef* i2c, uint8_t slave_addr, uint8_t* data, uint8_t data_len
-);
-
-extern I2C_Error i2c_read(I2C_TypeDef* i2c, uint8_t slave_addr, uint8_t* data, uint8_t data_len);
+//---------- SVC -----------
+void gain_priviledge();
 
 #endif

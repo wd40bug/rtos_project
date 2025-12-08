@@ -4,8 +4,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "stm32l476xx.h"
-#include "rtos.h"   // For I2C_Error, ms_since_start(), etc.
 
+typedef enum {
+  I2C_OK,
+  I2C_QUEUE_FULL,
+  INVALID_I2C,
+  CONCURRENT_RECV,
+} I2C_Error;
 /*
  * Initialize I2C1 and I2C2 peripherals and GPIO pins.
  * - PB8 / PB9  used for I2C1 (SCL/SDA)  (AF4)

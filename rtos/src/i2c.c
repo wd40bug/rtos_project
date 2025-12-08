@@ -1,4 +1,7 @@
 #include "i2c.h"
+#include "rtos.h"
+
+// NOTE: William didn't write this :D don't ask him what tf is happening
 
 // If the device header doesn't define these (or intellisense can't see it),
 // provide correct STM32L4 I2C_CR2 bit positions and masks.
