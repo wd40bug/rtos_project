@@ -76,64 +76,43 @@ static I2C_Error i2c_check_errors(I2C_TypeDef* i2c)
     return I2C_OK;
 }
 
-// =====================
-// Public API
-// =====================
-
 void i2c_init(void)
 {
     // Enable GPIOB clock (PB8-11)
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
 
     // Clear mode bits for PB8-11
-    GPIOB->MODER &=
-        ~(GPIO_MODER_MODE8_Msk | GPIO_MODER_MODE9_Msk |
-          GPIO_MODER_MODE10_Msk | GPIO_MODER_MODE11_Msk);
+    GPIOB->MODER &= ~(GPIO_MODER_MODE8_Msk | GPIO_MODER_MODE9_Msk);
 
     // Alternate function mode (10b)
     GPIOB->MODER |= (2U << GPIO_MODER_MODE8_Pos)
-                  | (2U << GPIO_MODER_MODE9_Pos)
-                  | (2U << GPIO_MODER_MODE10_Pos)
-                  | (2U << GPIO_MODER_MODE11_Pos);
+                  | (2U << GPIO_MODER_MODE9_Pos);
 
     // Open-drain, high speed
-    GPIOB->OTYPER |= GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9
-                   | GPIO_OTYPER_OT10 | GPIO_OTYPER_OT11;
+    GPIOB->OTYPER |= GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9;
 
     GPIOB->OSPEEDR |= (3U << GPIO_OSPEEDR_OSPEED8_Pos)
-                    | (3U << GPIO_OSPEEDR_OSPEED9_Pos)
-                    | (3U << GPIO_OSPEEDR_OSPEED10_Pos)
-                    | (3U << GPIO_OSPEEDR_OSPEED11_Pos);
+                    | (3U << GPIO_OSPEEDR_OSPEED9_Pos);
 
     // AF4 for I2C on PB8-11
-    GPIOB->AFR[1] &= ~(GPIO_AFRH_AFSEL8_Msk | GPIO_AFRH_AFSEL9_Msk |
-                       GPIO_AFRH_AFSEL10_Msk | GPIO_AFRH_AFSEL11_Msk);
+    GPIOB->AFR[1] &= ~(GPIO_AFRH_AFSEL8_Msk | GPIO_AFRH_AFSEL9_Msk);
     GPIOB->AFR[1] |= (4U << GPIO_AFRH_AFSEL8_Pos)
-                   | (4U << GPIO_AFRH_AFSEL9_Pos)
-                   | (4U << GPIO_AFRH_AFSEL10_Pos)
-                   | (4U << GPIO_AFRH_AFSEL11_Pos);
+                   | (4U << GPIO_AFRH_AFSEL9_Pos);
 
     // Disable I2C1 and I2C2 before config
     I2C1->CR1 &= ~I2C_CR1_PE;
-    I2C2->CR1 &= ~I2C_CR1_PE;
 
     // Enable APB1 clocks
     RCC->APB1ENR1 |= RCC_APB1ENR1_I2C1EN;
-    RCC->APB1ENR1 |= RCC_APB1ENR1_I2C2EN;
 
     // Timing config
     I2C1->TIMINGR = I2C_TIMING_REG;
-    I2C2->TIMINGR = I2C_TIMING_REG;
 
     // Enable peripherals
     I2C1->CR1 |= I2C_CR1_PE;
-    I2C2->CR1 |= I2C_CR1_PE;
 }
 
-// ---------------------
 // Blocking write
-// ---------------------
-
 I2C_Error i2c_write(I2C_TypeDef* i2c,
                     uint8_t slave_addr,
                     uint8_t* data,
@@ -161,10 +140,10 @@ I2C_Error i2c_write(I2C_TypeDef* i2c,
 
     // Send bytes
     for (uint8_t i = 0; i < data_len; i++) {
-        while ((i2c->ISR & I2C_ISR_TXIS) == 0U) {
+        while ((i2c->ISR & I2C_ISR_TXE) == 0U) {
             I2C_Error err = i2c_check_errors(i2c);
             if (err != I2C_OK) {
-                return err;
+               return err;
             }
         }
         i2c->TXDR = data[i];
@@ -179,10 +158,7 @@ I2C_Error i2c_write(I2C_TypeDef* i2c,
     return I2C_OK;
 }
 
-// ---------------------
 // Blocking read
-// ---------------------
-
 I2C_Error i2c_read(I2C_TypeDef* i2c,
                    uint8_t slave_addr,
                    uint8_t* data,
@@ -222,43 +198,4 @@ I2C_Error i2c_read(I2C_TypeDef* i2c,
 
     i2c->ICR = I2C_ICR_STOPCF;
     return I2C_OK;
-}
-
-// ---------------------
-// Register helpers
-// ---------------------
-
-I2C_Error i2c_write_reg(I2C_TypeDef* i2c,
-                        uint8_t slave_addr,
-                        uint8_t reg_addr,
-                        uint8_t* data,
-                        uint8_t data_len)
-{
-    uint8_t buf_len = (uint8_t)(data_len + 1U);
-    uint8_t buf[16];   // adjust if you need more
-
-    if (buf_len > sizeof(buf)) {
-        return INVALID_I2C;
-    }
-
-    buf[0] = reg_addr;
-    for (uint8_t i = 0; i < data_len; i++) {
-        buf[i + 1U] = data[i];
-    }
-
-    return i2c_write(i2c, slave_addr, buf, buf_len);
-}
-
-I2C_Error i2c_read_reg(I2C_TypeDef* i2c,
-                       uint8_t slave_addr,
-                       uint8_t reg_addr,
-                       uint8_t* data,
-                       uint8_t data_len)
-{
-    I2C_Error err = i2c_write(i2c, slave_addr, &reg_addr, 1U);
-    if (err != I2C_OK) {
-        return err;
-    }
-
-    return i2c_read(i2c, slave_addr, data, data_len);
 }

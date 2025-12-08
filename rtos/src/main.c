@@ -26,12 +26,12 @@ typedef enum {
   CALIBRATION = 5
 } i2c_register;
 
-I2C_Error get_slave_addr(I2C_TypeDef* i2c, uint8_t* addr) {
-  switch ((uintptr_t)i2c) {
-  case (uintptr_t)I2C1:
-    *addr = 0x41;
+I2C_Error get_slave_addr(I2C_TypeDef* i2c, uint8_t* addr, uint8_t sensor) {
+  switch (sensor) {
+  case (1):
+    *addr = 0x40;
     return I2C_OK;
-  case (uintptr_t)I2C2:
+  case (2):
     *addr = 0x41;
     return I2C_OK;
   default:
@@ -39,9 +39,9 @@ I2C_Error get_slave_addr(I2C_TypeDef* i2c, uint8_t* addr) {
   }
 }
 
-I2C_Error write_i2c_message(I2C_TypeDef* i2c, i2c_register reg, uint16_t data) {
+I2C_Error write_i2c_message(I2C_TypeDef* i2c, i2c_register reg, uint16_t data, uint8_t sensor) {
   uint8_t slave_addr;
-  I2C_Error err = get_slave_addr(i2c, &slave_addr);
+  I2C_Error err = get_slave_addr(i2c, &slave_addr, sensor);
   if (err != I2C_OK) {
     return err;
   }
@@ -54,13 +54,13 @@ I2C_Error write_i2c_message(I2C_TypeDef* i2c, i2c_register reg, uint16_t data) {
   return i2c_write(i2c, slave_addr, to_send, 3);
 }
 
-I2C_Error read_i2c_message(I2C_TypeDef* i2c, uint16_t* dout) {
+I2C_Error read_i2c_message(I2C_TypeDef* i2c, uint16_t* dout, uint8_t sensor) {
   union {
     uint8_t bytes[2];
     uint16_t value;
   } read;
   uint8_t slave_addr;
-  I2C_Error err = get_slave_addr(i2c, &slave_addr);
+  I2C_Error err = get_slave_addr(i2c, &slave_addr, sensor);
   if (err != I2C_OK){
     return err;
   }
@@ -71,27 +71,40 @@ I2C_Error read_i2c_message(I2C_TypeDef* i2c, uint16_t* dout) {
   *dout = read.value;
   return I2C_OK;
 }
+
 const uint16_t I2C_CONFIG = 0x399F; // 0011 1001 1001 1111
 const uint16_t I2C_CALIB = 13400; // 0111 0100 0101 1000
+const uint16_t I2C_CALIB2 = 0x0EF5; // 0000 1110 1111 0101
 
 task_err read1(task_data* task) {
   // Standard config for continuous measurements
-  printf("Beginning i2c1 task\n");
-  write_i2c_message(I2C1, CONFIGURATION, I2C_CONFIG);
+  printf("Beginning Sesnor 1 task\n");
+  write_i2c_message(I2C1, CONFIGURATION, I2C_CONFIG, 1);
   printf("Sent configs\n");
-  write_i2c_message(I2C1, CALIBRATION, I2C_CALIB);
+  write_i2c_message(I2C1, CALIBRATION, I2C_CALIB, 1);
   printf("Sent calibration\n");
   uint16_t voltage = 0xFFFF;
-  write_i2c_message(I2C1, BUS_VOLTAGE, 0x0000);
+  write_i2c_message(I2C1, BUS_VOLTAGE, 0x0000, 1);
   printf("Wrote zero to bus voltage\n");
-  read_i2c_message(I2C1, &voltage);
+  read_i2c_message(I2C1, &voltage, 1);
   printf("READ FROM i2c: %u\n", voltage);
+
+  printf("Beginning Sensor 2 task\n");
+  write_i2c_message(I2C1, CONFIGURATION, I2C_CONFIG, 2);
+  printf("Sent configs\n");
+  write_i2c_message(I2C1, CALIBRATION, I2C_CALIB2, 2);
+  printf("Sent calibration\n");
+  uint16_t voltage2 = 0xFFFF;
+  write_i2c_message(I2C1, BUS_VOLTAGE, 0x0000, 2);
+  printf("Wrote zero to bus voltage\n");
+  read_i2c_message(I2C1, &voltage2, 2);
+  printf("READ FROM i2c: %u\n", voltage2);
   while (1) {
   }
 }
 
 task_err read2(task_data* task) {
-  printf("Beginning i2c2 task\n");
+
   while (1);
 }
 
