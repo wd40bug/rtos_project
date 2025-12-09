@@ -1,65 +1,114 @@
 // src/main.cpp
-#include <Arduino.h>
-#include <WiFi.h>
-#include <WebServer.h>
-#include <ArduinoJson.h>
 
-#include "loads.h"
-#include "stm_link.h"
+#include <Arduino.h>          // Core Arduino API for ESP32
+#include <WiFi.h>             // Wi-Fi control for ESP32
+#include <WebServer.h>        // Simple HTTP server implementation
+#include <ArduinoJson.h>      // JSON encoding/decoding for HTTP responses
 
-// ================== CONFIG ==================
-const char *WIFI_SSID = "";
-const char *WIFI_PASS = "";
+#include "loads.h"            // Declares LoadState array and helper functions for loads
+#include "stm_link.h"         // Declares STM32 UART link helpers (stmInit, stmPoll, stmQueueRelayCommand)
 
-float HIGH_USAGE_W = 36.0f;
+// Wifi Configuration
+const char *WIFI_SSID = "";   // Wi-Fi network SSID to connect to
+const char *WIFI_PASS = "";    // Wi-Fi password
+
+// High Usage Threshold
+float HIGH_USAGE_W = 10.0f;             // Threshold (in watts) at which the fan should turn on automatically
 
 // UART pins for STM32 (adjust to your wiring)
-const int STM32_RX_PIN = 16;  // ESP32 receives from STM32 TX
-const int STM32_TX_PIN = 17;  // ESP32 sends to STM32 RX (optional)
+const int STM32_RX_PIN = 16;  // ESP32 RX pin (receives data from STM32 TX)
+const int STM32_TX_PIN = 17;  // ESP32 TX pin (sends data to STM32 RX)
 
-// Set true once you actually have STM32 sending data and parsing is done
-bool USE_STM32_UART = false;
+// Set true to not use fake data (Actual STM connection)
+bool USE_STM32_UART = true;  // When true, poll STM32 over UART; when false, use fake data generator
 
-// ================== GLOBALS ==================
-WebServer server(80);
+// Global variables
+WebServer server(80);         // HTTP server listening on port 80
 
-// ================== HELPERS ==================
+// Integrate Power over time for Energy in Wh
+void updateEnergyFromPower() {
+  static unsigned long lastMs = 0;   // Stores the last time this function ran (in ms since boot)
+  unsigned long now = millis();      // Current time in ms since boot
+
+  if (lastMs == 0) {
+    // initializes timestamp
+    lastMs = now;
+    return;
+  }
+
+  unsigned long dtMs = now - lastMs; // Change in time
+  lastMs = now;
+
+  if (dtMs == 0) return;
+
+  // Convert ms -> hours
+  float dtHours = dtMs / 3600000.0f;
+
+  for (int i = 0; i < LOAD_COUNT; ++i) {
+    LoadState &l = g_loads[i];
+
+    // Skips fan
+    if (strcmp(l.id, "fan") == 0) {
+      continue;
+    }
+
+    // integrate when on
+    if (!l.on) continue;
+
+    l.energy_Wh += l.power_W * dtHours;
+  }
+}
+
+// Helper functions
 void addCORS() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-// ================== HTTP HANDLERS ==================
+// HTTP Handlers
 
 void handleStatus() {
   addCORS();
 
-  // --- Update loads from STM32 or fake data ---
+  // Update loads from STM32 or fake data
   if (USE_STM32_UART) {
     stmPoll();          // pull in fresh data from STM32 (will update g_loads)
   } else {
     updateFakeLoads();  // keep things alive until STM32 is ready
   }
 
-  // --- Automatic fan control based on total monitored power ---
+  // Integrate Power
+  updateEnergyFromPower();
+
+  // Automatic fan control based on total monitored power
   float totalPower = getTotalPowerW();  // lamp + charger only (fan excluded in loads.cpp)
   LoadState *fan = findLoadById("fan");
   if (fan) {
     // Simple hysteresis so it doesn't chatter on/off around the threshold
     static bool fanWasOn = false;
 
+    // HIGH edge: fan OFF -> ON
     if (!fanWasOn && totalPower > HIGH_USAGE_W) {
-      fan->on = true;
+      // queue one toggle to turn fan ON
+      if (USE_STM32_UART) {
+        stmQueueRelayCommand(2, true);   // 'true' is just semantic; STM toggles
+      }
+
       fanWasOn = true;
+      fan->on = true;
       Serial.println("Fan AUTO -> ON (high total power)");
-      // TODO: if STM32 actually drives the relay, send a UART command here, e.g.:
-      // Serial2.println("fan,1");
-    } else if (fanWasOn && totalPower < HIGH_USAGE_W * 0.8f) {
-      fan->on = false;
+    }
+    // LOW edge with hysteresis: fan ON -> OFF
+    else if (fanWasOn && totalPower < HIGH_USAGE_W * 0.8f) {
+      // queue one toggle to turn fan OFF
+      if (USE_STM32_UART) {
+        stmQueueRelayCommand(2, false);  // value again doesn't matter to STM
+      }
+
       fanWasOn = false;
+      fan->on = false;
       Serial.println("Fan AUTO -> OFF (power normalized)");
-      // Serial2.println("fan,0");
     }
   }
 
@@ -74,9 +123,9 @@ void handleStatus() {
     JsonObject o = loadsObj.createNestedObject(l.id);
     o["name"] = l.name;
     o["on"] = l.on;
-    o["voltage_V"] = l.voltage_V;
-    o["current_A"] = l.current_A;
-    o["power_W"] = l.power_W;
+    o["voltage_V"] = l.voltage_V / 1000;
+    o["current_A"] = l.current_A / 1000;
+    o["power_W"] = l.power_W / 1000;
     o["energy_Wh"] = l.energy_Wh;
   }
 
@@ -99,7 +148,7 @@ void handleStatus() {
   server.send(200, "application/json", json);
 }
 
-// POST /api/control  { "loadId":"fan", "on":true }
+// POST /api/control  { "loadId":"lamp", "on":false }
 void handleControl() {
   addCORS();
 
@@ -126,8 +175,31 @@ void handleControl() {
 
   load->on = on;
 
-  // NOTE: auto-control logic in handleStatus() will still enforce the threshold;
-  // manual fan toggles from the UI can be overridden by the auto logic on next poll.
+  // Map loadId -> relay index: lamp=0, charger=1, fan=2
+  int relayIndex = -1;
+  if (loadId == "lamp") {
+    relayIndex = 0;
+  } else if (loadId == "charger") {
+    relayIndex = 1;
+  } else if (loadId == "fan") {
+    relayIndex = 2;
+  }
+
+  // Queue relay command for STM, if using UART
+  if (USE_STM32_UART && relayIndex >= 0) {
+    bool ok = stmQueueRelayCommand(relayIndex, on);
+    if (!ok) {
+      Serial.println("Warning: relay command queue full or UART not ready");
+    } else {
+      Serial.printf(
+        "Queued relay cmd from web: loadId=%s index=%d on=%d\n",
+        loadId.c_str(),
+        relayIndex,
+        on ? 1 : 0
+      );
+    }
+  }
+
   Serial.printf("Set %s to %s (manual request)\n", loadId.c_str(), on ? "ON" : "OFF");
 
   StaticJsonDocument<128> resp;
@@ -149,7 +221,7 @@ void handleNotFound() {
   server.send(404, "text/plain", "Not found");
 }
 
-// ================== SETUP & LOOP ==================
+// Setup and loop
 void setup() {
   Serial.begin(115200);
   delay(500);
@@ -186,7 +258,6 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  // If you want STM32 updates more often, you can also poll here:
   if (USE_STM32_UART) {
     stmPoll();
   }

@@ -2,34 +2,36 @@
 #pragma once
 #include <Arduino.h>
 
+// Enumeration for load IDs used to identify each controlled device
 enum LoadId {
-  LOAD_LAMP = 0,
-  LOAD_CHARGER = 1,
-  LOAD_FAN = 2,
-  LOAD_COUNT
+  LOAD_LAMP = 0,     // Index 0 - Desk Lamp relay
+  LOAD_CHARGER = 1,  // Index 1 - Phone Charger relay
+  LOAD_FAN = 2,      // Index 2 - Fan relay
+  LOAD_COUNT          // Total number of loads
 };
 
+// Structure describing the current state of one electrical load
 struct LoadState {
-  const char *id;     // "lamp", "charger", "fan"
-  const char *name;   // pretty display name
-  bool on;
-  float voltage_V;
-  float current_A;
-  float power_W;
-  float energy_Wh;
+  const char *id;     // Short string identifier ("lamp", "charger", "fan")
+  const char *name;   // Human-readable display name for UI
+  bool on;            // Logical on/off state tracked by ESP32
+  float voltage_V;    // Measured voltage in volts
+  float current_A;    // Measured current in amps
+  float power_W;      // Instantaneous power in watts
+  float energy_Wh;    // Accumulated energy usage in watt-hours
 };
 
-// Global array of loads (defined in loads.cpp)
+// Global array of load states (allocated in loads.cpp)
 extern LoadState g_loads[LOAD_COUNT];
 
-// Initialize with default values
+// Initializes the g_loads array with default IDs, names, and zeros for measurements
 void initLoads();
 
-// Find load by string id ("lamp"/"charger"/"fan")
+// Finds a load pointer by its string identifier ("lamp", "charger", or "fan")
 LoadState *findLoadById(const String &id);
 
-// Simple fake update to wiggle values when STM32 isn’t hooked up yet
+// Generates fake measurement data when STM32 is disconnected (for UI demo/testing)
 void updateFakeLoads();
 
-// Utility: total power across all loads (for graphs etc.)
+// Computes total power draw across all monitored loads (lamp + charger)
 float getTotalPowerW();
