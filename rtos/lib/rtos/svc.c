@@ -2,6 +2,7 @@
 #include "messaging.h"
 #include "stm32l476xx.h"
 #include "timing.h"
+#include "frames.h"
 
 void gain_priviledge() {
   __asm__ volatile("svc #0\n\t");

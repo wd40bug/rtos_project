@@ -1,9 +1,11 @@
 #include "rtos.h"
+#include "i2c.h"
 #include "messaging.h"
 #include "printf.h"
 #include "scheduling.h"
 #include "serial.h"
 #include "timing.h"
+#include "frames.h"
 #include <stm32l476xx.h>
 
 static void priorities() {
@@ -14,6 +16,8 @@ static void priorities() {
   // 1: SVCall and USART2
   NVIC_SetPriority(SVCall_IRQn, 0x1);
   NVIC_SetPriority(USART2_IRQn, 0x1);
+  NVIC_SetPriority(I2C1_EV_IRQn, 0x1);
+  NVIC_SetPriority(I2C2_EV_IRQn, 0x1);
   // F: PendSV and SysTick
   NVIC_SetPriority(SysTick_IRQn, 0xF);
   NVIC_SetPriority(PendSV_IRQn, 0xF);
@@ -34,6 +38,7 @@ void rtos_init() {
   init_serial(115200);
   scheduling_init();
   messaging_init();
+  i2c_init();
 }
 
 void rtos_run() {
