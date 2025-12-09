@@ -1,7 +1,6 @@
 #include "i2c.h"
 
-// If the device header doesn't define these (or intellisense can't see it),
-// provide correct STM32L4 I2C_CR2 bit positions and masks.
+// redefine STM header variables as sanity check
 
 #ifndef I2C_CR2_SADD_Pos
 #define I2C_CR2_SADD_Pos      0U
@@ -23,16 +22,12 @@
 #define I2C_CR2_AUTOEND       (1U << I2C_CR2_AUTOEND_Pos)
 #endif
 
-// =====================
-// Configuration macros
-// =====================
+// ---- configuration macros ----
 
-#define I2C_TIMEOUT_MS  10U           // Simple timeout for waits (tune as needed)
-#define I2C_TIMING_REG  0x30420F13U   // Your existing timing value
+#define I2C_TIMEOUT_MS  10U           
+#define I2C_TIMING_REG  0x30420F13U  
 
-// =====================
-// Internal helpers
-// =====================
+// ---- internal helpers ----
 
 static bool i2c_wait_flag_set(I2C_TypeDef* i2c, uint32_t flag_mask)
 {
@@ -135,7 +130,7 @@ I2C_Error i2c_write(I2C_TypeDef* i2c,
     cr2 |= ((uint32_t)data_len  << I2C_CR2_NBYTES_Pos);  // NBYTES
     cr2 |= I2C_CR2_START;                                // START
     cr2 |= I2C_CR2_AUTOEND;                              // AUTOEND
-    // RD_WRN = 0 => write
+    // RD_WRN = 0 -> write
     i2c->CR2 = cr2;
 
     // Send bytes
