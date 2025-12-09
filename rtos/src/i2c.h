@@ -17,28 +17,11 @@ typedef enum {
  * - PB10 / PB11 used for I2C2 (SCL/SDA) (AF4)
  */
 void i2c_init(void);
-
-/*
- * Blocking I2C write:
- *  - i2c:        I2C1 or I2C2
- *  - slave_addr: 7-bit slave address (unshifted, e.g., 0x41)
- *  - data:       pointer to bytes to send
- *  - data_len:   number of bytes to send
- *
- * Signature matches existing code: data is non-const.
- */
 I2C_Error i2c_write(I2C_TypeDef* i2c,
                     uint8_t slave_addr,
                     uint8_t* data,
                     uint8_t data_len);
 
-/*
- * Blocking I2C read:
- *  - i2c:        I2C1 or I2C2
- *  - slave_addr: 7-bit slave address (unshifted, e.g., 0x41)
- *  - data:       pointer to buffer to store received bytes
- *  - data_len:   number of bytes to read
- */
 I2C_Error i2c_read(I2C_TypeDef* i2c,
                    uint8_t slave_addr,
                    uint8_t* data,
