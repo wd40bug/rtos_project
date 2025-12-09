@@ -93,27 +93,33 @@ size_t Q_FREE_FN(QUEUE_TYPENAME* Q) {
   return QUEUE_CAPACITY - Q->size;
 }
 
-bool Q_CONTAINS_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE item){
-  for (int i = Q->head; i != __Q_ADD(Q->head, Q->size); i = __Q_ADD(i, 1)){
-    if (Q->data[i] == item){
+#ifndef QUEUE_NO_CONTAINS
+bool Q_CONTAINS_FN(QUEUE_TYPENAME* Q, QUEUE_TYPE item) {
+  for (int i = Q->head; i != __Q_ADD(Q->head, Q->size); i = __Q_ADD(i, 1)) {
+    if (Q->data[i] == item) {
       return true;
     }
   }
   return false;
 }
+#endif /* ifndef QUEUE_NO_CONTAINS */
 
-size_t Q_ENQUEUE_ALL_FN (QUEUE_TYPENAME* Q, size_t buffer_size, QUEUE_TYPE* const buffer){
+size_t Q_ENQUEUE_ALL_FN(
+    QUEUE_TYPENAME* Q, size_t buffer_size, QUEUE_TYPE* const buffer
+) {
   for (int i = 0; i < buffer_size; i++) {
-    if (!Q_ENQUEUE_FN(Q, buffer[i])){
+    if (!Q_ENQUEUE_FN(Q, buffer[i])) {
       return i;
     }
   }
   return buffer_size;
 }
 
-size_t Q_DEQUEUE_ALL_FN (QUEUE_TYPENAME* Q, size_t buffer_size, QUEUE_TYPE* buffer){
-  for (int i = 0; i < buffer_size; i++){
-    if (!Q_DEQUEUE_FN(Q, &buffer[i])){
+size_t Q_DEQUEUE_ALL_FN(
+    QUEUE_TYPENAME* Q, size_t buffer_size, QUEUE_TYPE* buffer
+) {
+  for (int i = 0; i < buffer_size; i++) {
+    if (!Q_DEQUEUE_FN(Q, &buffer[i])) {
       return i;
     }
   }

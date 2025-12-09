@@ -54,7 +54,7 @@ timer_err timing_delay_ms(uint32_t delay) {
     return TIMER_SCHED_ERR;
   }
   if (!timer_list_insert(&timers, task_timer)){
-    // TODO: Either ignore or hard fault
+    return TIMER_TOO_MANY_TIMERS;
   }
   
   return TIMER_OK;

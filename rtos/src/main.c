@@ -1,4 +1,4 @@
-#include "svc.h"
+#include "rtos.h"
 #include <inttypes.h>
 #include <printf.h>
 #include <stdbool.h>
@@ -15,6 +15,97 @@ task_err pong(task_data* task) {
     printf("pong ticks: %" PRIu32 "\n", (uint32_t)ms_since_start());
     delay_ms(2000);
   }
+}
+
+typedef enum {
+  CONFIGURATION = 0,
+  SHUNT_VOLTAGE = 1,
+  BUS_VOLTAGE = 2,
+  POWER = 3,
+  CURRENT = 4,
+  CALIBRATION = 5
+} i2c_register;
+
+I2C_Error get_slave_addr(I2C_TypeDef* i2c, uint8_t* addr, uint8_t sensor) {
+  switch (sensor) {
+  case (1):
+    *addr = 0x40;
+    return I2C_OK;
+  case (2):
+    *addr = 0x41;
+    return I2C_OK;
+  default:
+    return INVALID_I2C;
+  }
+}
+
+I2C_Error write_i2c_message(I2C_TypeDef* i2c, i2c_register reg, uint16_t data, uint8_t sensor) {
+  uint8_t slave_addr;
+  I2C_Error err = get_slave_addr(i2c, &slave_addr, sensor);
+  if (err != I2C_OK) {
+    return err;
+  }
+  union {
+    uint8_t bytes[2];
+    uint16_t val;
+  } send;
+  send.val = data;
+  uint8_t to_send[3] = {reg, send.bytes[1], send.bytes[0]};
+  return i2c_write(i2c, slave_addr, to_send, 3);
+}
+
+I2C_Error read_i2c_message(I2C_TypeDef* i2c, uint16_t* dout, uint8_t sensor) {
+  union {
+    uint8_t bytes[2];
+    uint16_t value;
+  } read;
+  uint8_t slave_addr;
+  I2C_Error err = get_slave_addr(i2c, &slave_addr, sensor);
+  if (err != I2C_OK){
+    return err;
+  }
+  err = i2c_read(i2c, slave_addr, read.bytes, 2);
+  if (err != I2C_OK) {
+    return err;
+  }
+  *dout = read.value;
+  return I2C_OK;
+}
+
+const uint16_t I2C_CONFIG = 0x399F; // 0011 1001 1001 1111
+const uint16_t I2C_CALIB = 13400; // 0111 0100 0101 1000
+const uint16_t I2C_CALIB2 = 0x0EF5; // 0000 1110 1111 0101
+
+task_err read1(task_data* task) {
+  // Standard config for continuous measurements
+  printf("Beginning Sesnor 1 task\n");
+  write_i2c_message(I2C1, CONFIGURATION, I2C_CONFIG, 1);
+  printf("Sent configs\n");
+  write_i2c_message(I2C1, CALIBRATION, I2C_CALIB, 1);
+  printf("Sent calibration\n");
+  uint16_t voltage = 0xFFFF;
+  write_i2c_message(I2C1, BUS_VOLTAGE, 0x0000, 1);
+  printf("Wrote zero to bus voltage\n");
+  read_i2c_message(I2C1, &voltage, 1);
+  printf("READ FROM i2c: %u\n", voltage);
+
+  printf("Beginning Sensor 2 task\n");
+  write_i2c_message(I2C1, CONFIGURATION, I2C_CONFIG, 2);
+  printf("Sent configs\n");
+  write_i2c_message(I2C1, CALIBRATION, I2C_CALIB2, 2);
+  printf("Sent calibration\n");
+  uint16_t voltage2 = 0xFFFF;
+  write_i2c_message(I2C1, BUS_VOLTAGE, 0x0000, 2);
+  printf("Wrote zero to bus voltage\n");
+  read_i2c_message(I2C1, &voltage2, 2);
+  printf("READ FROM i2c: %u\n", voltage2);
+  while (1) {
+  }
+}
+
+task_err read2(task_data* task) {
+
+  while (1);
 }
 
 static TASK_HANDLE long_calculation_handle;
@@ -53,12 +144,11 @@ task_err long_calculation(task_data* task) {
       task->priority,
       &print_task
   );
-  if (s_err != SCHED_ERR_OK){
+  if (s_err != SCHED_ERR_OK) {
     return GEN_ERR;
   }
   MESSAGE_QUEUE_HANDLE print_queue;
-  message_q_error q_err =
-      message_queue_create(print_task, &print_queue);
+  message_q_error q_err = message_queue_create(print_task, &print_queue);
   if (q_err != MESSAGE_QUEUE_OK) {
     return GEN_ERR;
   }
@@ -89,11 +179,7 @@ int main(void) {
   scheduling_add_task(ping, 0, NULL);
   scheduling_add_task(pong, 0, NULL);
   scheduling_add_task(long_calculation, 1, &long_calculation_handle);
-  // scheduling_add_task(
-  //     print_time_from_long_calculation,
-  //     1,
-  //     &long_calculation_print_handle
-  // );
+  scheduling_add_task(read1, 0, NULL);
   printf("\nEverything Initialized!\n");
   rtos_run();
   while (1) {
