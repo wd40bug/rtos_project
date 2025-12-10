@@ -4,6 +4,8 @@
 #include "timing.h"
 #include "frames.h"
 
+// Syscalls are how users access functions that shouldn't be interrupted
+
 void gain_priviledge() {
   __asm__ volatile("svc #0\n\t");
 }
@@ -11,6 +13,7 @@ void gain_priviledge() {
 void relinquish_priviledge() {
   __asm__ volatile("svc #1\n\t");
 }
+
 
 timer_err delay_ms(uint32_t ms) {
   timer_err ret;
@@ -21,6 +24,7 @@ timer_err delay_ms(uint32_t ms) {
                    : [ms] "r"(ms));
   return ret;
 }
+
 
 message_q_error message_queue_create(
     TASK_HANDLE handle, MESSAGE_QUEUE_HANDLE* q_handle

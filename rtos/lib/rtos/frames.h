@@ -1,5 +1,9 @@
 #include <stdint.h>
 #ifndef FRAMES_H
+
+// Stack frame structs for debugging and SVCs
+
+
 typedef struct __attribute__((packed)) {
   uint32_t r0;
   uint32_t r1;

@@ -1,5 +1,4 @@
 #include "rtos.h"
-#include "i2c.h"
 #include "messaging.h"
 #include "printf.h"
 #include "scheduling.h"
@@ -38,7 +37,6 @@ void rtos_init() {
   init_serial(115200);
   scheduling_init();
   messaging_init();
-  i2c_init();
 }
 
 void rtos_run() {

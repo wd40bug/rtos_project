@@ -67,7 +67,7 @@ void init_serial(uint32_t baud) {
   }
 }
 
-void _putchar(char character) {
+void putchar_(char character) {
   print_queue* Q = &cbuffers[get_current_task().task_handle];
   if (!print_queue_enqueue(Q, character)) {
     // TODO: Handle full queue
