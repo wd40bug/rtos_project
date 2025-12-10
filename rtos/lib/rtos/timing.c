@@ -23,6 +23,7 @@ int timer_comparator(timer a, timer b) {
 
 static uint64_t ticks = 0;
 
+// Holds all running timers
 static timer_list timers;
 
 void timing_init() {

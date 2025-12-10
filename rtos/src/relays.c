@@ -15,5 +15,5 @@ void toggle_relay(uint8_t relay) {
     return;
   }
   printf("Toggling relay: %d\n", relay);
-  GPIOA->ODR ^= 1 << relay;
+  GPIOA->ODR ^= 1 << (relay + 5);
 }

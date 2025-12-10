@@ -4,6 +4,8 @@
 #include "timing.h"
 #include "frames.h"
 
+// Syscalls are how users access functions that shouldn't be interrupted
+
 void gain_priviledge() {
   __asm__ volatile("svc #0\n\t");
 }

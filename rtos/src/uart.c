@@ -8,6 +8,7 @@
 #define QUEUE_TYPE char
 #include "queue.h"
 
+// Hold received chars
 recv_queue q;
 
 void uart_init() {
@@ -35,6 +36,7 @@ void uart_init() {
 void write_uart(char* data, size_t num) {
   size_t sent = 0;
   while (sent < num) {
+    // Wait until free
     while (!(USART1->ISR & USART_ISR_TXE));
     USART1->TDR = data[sent++];
   }

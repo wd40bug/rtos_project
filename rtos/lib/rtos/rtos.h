@@ -1,6 +1,8 @@
 #ifndef RTOS_H
 #define RTOS_H
 
+// ALL USER AVAILABLE FUNCTIONS ARE IN THIS FILE. ALL OTHER FILES ARE RTOS-INTERNALS!!!
+
 #include "stm32l476xx.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -135,8 +137,4 @@ extern message_q_error message_queue_read(
 extern message_q_error message_queue_data_available(
     MESSAGE_QUEUE_HANDLE q_handle, size_t* data
 );
-
-//---------- SVC -----------
-void gain_priviledge();
-
 #endif
